@@ -12,5 +12,5 @@ data/sheet2_zongbiao_decoded.json
 .DS_Store
 __pycache__/
 node_modules/
-dist/
 .workbuddy/
+.wrangler/
