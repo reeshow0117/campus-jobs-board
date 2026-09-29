@@ -1,6 +1,8 @@
 # 秋招岗位看板 · 27届
 
-基于两份公开校招表格（27届校招秋招实习内推表 + 毕业帮校招表格）构建的本地秋招助手：**岗位看板 + 投递追踪 + 半自动填表投递**。
+基于两份公开校招表格（27届校招秋招实习内推表 + 毕业帮校招表格）构建的秋招助手：**岗位看板 + 投递追踪 + 半自动填表投递**。
+
+**在线版：<https://campus-jobs-board.pages.dev>**（Cloudflare Pages 托管，推送到 main 分支自动更新）
 
 ## 功能
 
@@ -33,11 +35,26 @@ python3 auto_apply.py "https://投递链接" --refcode 内推码
 ## 自己抓取最新数据（可选）
 
 ```bash
+./refresh_data.sh    # 一条命令：重抓两张表 → 合并 → 重建看板 → 提交推送（自动部署）
+```
+
+或手动分步执行：
+
+```bash
 python3 data/fetch_smartsheet.py   # 抓内推表
 python3 data/fetch_sheet2.py       # 抓毕业帮表
 python3 data/merge_jobs.py         # 合并清洗
 python3 data/build_dashboard.py    # 重新生成看板 HTML
+cp 秋招岗位看板.html dist/index.html
 ```
+
+## 部署（Cloudflare Pages · Git 联动）
+
+本仓库通过 Cloudflare Pages 的 Git 集成部署：推送到 `main` 分支即自动构建发布，无需本地装 wrangler。
+
+- 构建配置：Framework preset = None，Build command 留空，Build output directory = `dist`
+- `dist/index.html` 即看板完整单文件（数据已内嵌，无需后端）
+- 修改 `dashboard_template.html` 后运行 `python3 data/build_dashboard.py && cp 秋招岗位看板.html dist/index.html`，提交推送即可上线
 
 ## 数据来源
 
