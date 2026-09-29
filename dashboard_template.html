@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>秋招岗位看板 · 27届</title>
+<style>
+  :root {
+    --primary: #185FA5;
+    --primary-dark: #0F4C8A;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2329;
+    --text-2: #646a73;
+    --text-3: #8f959e;
+    --red: #d83931;
+    --green: #188038;
+    --orange: #d97706;
+    --tag-bg: #eef2f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 20px 24px 60px; }
+
+  /* header */
+  .header { display: flex; align-items: flex-end; justify-content: space-between; padding: 18px 0 14px; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 22px; font-weight: 600; letter-spacing: .5px; }
+  .header h1 span { color: var(--primary); }
+  .header .meta { color: var(--text-3); font-size: 12px; margin-top: 4px; }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: box-shadow .15s; }
+  .stat:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .stat .num { font-size: 22px; font-weight: 600; color: var(--primary); }
+  .stat .label { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .stat.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+
+  /* filter bar */
+  .filterbar { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .filterbar input[type=text], .filterbar select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; font-size: 13px; background: #fff; color: var(--text); outline: none; }
+  .filterbar input[type=text] { width: 240px; }
+  .filterbar input:focus, .filterbar select:focus { border-color: var(--primary); }
+  .chk { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); cursor: pointer; user-select: none; }
+  .btn { height: 32px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 13px; cursor: pointer; }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); color: #fff; }
+  .result-count { font-size: 12px; color: var(--text-3); margin-left: auto; }
+
+  /* job list */
+  .job { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; gap: 14px; align-items: flex-start; }
+  .job:hover { box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+  .job.done { opacity: .55; }
+  .job-main { flex: 1; min-width: 0; }
+  .job-line1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .company { font-weight: 600; font-size: 15px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--tag-bg); color: var(--text-2); white-space: nowrap; }
+  .tag.blue { background: #e8f0fa; color: var(--primary); }
+  .tag.red { background: #fdeceb; color: var(--red); }
+  .tag.green { background: #e6f4ea; color: var(--green); }
+  .tag.orange { background: #fdf3e3; color: var(--orange); }
+  .job-title { color: var(--text); font-size: 13px; margin-top: 5px; line-height: 1.5; }
+  .job-sub { color: var(--text-3); font-size: 12px; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .job-note { display: none; margin-top: 8px; padding: 8px 10px; background: #f8f9fb; border-radius: 6px; font-size: 12px; color: var(--text-2); line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+  .job-note.open { display: block; }
+  .job-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .job-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .status-sel { height: 28px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; background: #fff; color: var(--text-2); }
+  .status-sel.s1 { border-color: var(--primary); color: var(--primary); }
+  .status-sel.s2 { border-color: var(--orange); color: var(--orange); }
+  .status-sel.s3 { border-color: var(--orange); color: var(--orange); }
+  .status-sel.s4 { border-color: var(--green); color: var(--green); }
+  .status-sel.s5 { border-color: var(--red); color: var(--red); }
+  .mini-btn { height: 28px; padding: 0 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text-2); }
+  .mini-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .mini-btn.apply { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .mini-btn.apply:hover { background: var(--primary-dark); }
+  .deadline { font-size: 12px; color: var(--text-2); }
+  .deadline.urgent { color: var(--red); font-weight: 600; }
+  .fav { cursor: pointer; font-size: 15px; color: #c9cdd4; user-select: none; }
+  .fav.on { color: #f5a623; }
+
+  .loadmore { display: block; margin: 18px auto; }
+
+  /* sections */
+  .section-title { font-size: 15px; font-weight: 600; margin: 26px 0 10px; }
+  .res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+  .res { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .res .rtype { font-size: 11px; color: var(--primary); }
+  .res a { color: var(--primary); text-decoration: none; word-break: break-all; }
+  .res a:hover { text-decoration: underline; }
+
+  /* modal */
+  .modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 100; }
+  .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 12px; padding: 22px; width: 420px; max-width: 92vw; z-index: 101; box-shadow: 0 8px 30px rgba(0,0,0,.15); }
+  .modal h3 { font-size: 16px; margin-bottom: 14px; }
+  .modal .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .modal .row label { width: 80px; font-size: 13px; color: var(--text-2); flex-shrink: 0; }
+  .modal .row input, .modal .row textarea { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; outline: none; font-family: inherit; }
+  .modal .row input { height: 32px; }
+  .modal .row textarea { min-height: 64px; resize: vertical; }
+  .modal .row.v-top { align-items: flex-start; }
+  .modal .row.v-top label { padding-top: 6px; }
+  .modal .p-group { font-size: 12px; font-weight: 600; color: var(--primary); margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .modal .row input:focus { border-color: var(--primary); }
+  .modal .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2329; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; z-index: 200; pointer-events: none; }
+  .toast.show { opacity: .92; }
+
+  /* multi-select */
+  .ms { position: relative; }
+  .ms-btn { height: 32px; min-width: 130px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 13px; color: var(--text-2); cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .ms-btn:hover, .ms.open .ms-btn { border-color: var(--primary); }
+  .ms-btn .cnt { color: var(--primary); font-weight: 600; }
+  .ms-btn::after { content: '▾'; font-size: 10px; color: var(--text-3); }
+  .ms-panel { display: none; position: absolute; top: 36px; left: 0; z-index: 60; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.1); padding: 8px; max-height: 300px; overflow-y: auto; min-width: 170px; }
+  .ms.open .ms-panel { display: block; }
+  .ms-panel .chk { padding: 4px 6px; border-radius: 4px; white-space: nowrap; }
+  .ms-panel .chk:hover { background: #f2f4f7; }
+  .ms-panel .ms-actions { display: flex; gap: 6px; padding: 4px 6px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+  .ms-panel .ms-actions span { font-size: 12px; color: var(--primary); cursor: pointer; }
+
+  /* batch bar */
+  .batchbar { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 10px 24px; box-shadow: 0 -2px 12px rgba(0,0,0,.08); z-index: 50; align-items: center; gap: 12px; font-size: 13px; }
+  .batchbar.show { display: flex; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>秋招岗位看板 <span>27届</span></h1>
+      <div class="meta" id="metaLine"></div>
+      <div class="meta" style="margin-top:2px">
+        数据源：
+        <a href="https://docs.qq.com/smartsheet/DWnBUVm9OVFhuSEJ4?tab=twLpD9&viewId=vPmpSf" target="_blank" style="color:var(--primary)">27届校招秋招实习内推表</a>
+        ·
+        <a href="https://docs.qq.com/sheet/DTENzbmppUGd2Smxk?tab=000001" target="_blank" style="color:var(--primary)">毕业帮校招表格</a>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="profileBtn">投递资料卡</button>
+      <button class="btn" id="exportBtn">导出投递清单</button>
+      <button class="btn" id="resetBtn" title="清除本地状态">重置状态</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filterbar">
+    <input type="text" id="q" placeholder="搜索公司 / 岗位 / 备注关键词">
+    <div class="ms" id="msTag"></div>
+    <div class="ms" id="msType"></div>
+    <div class="ms" id="msJtype"></div>
+    <div class="ms" id="msCity"></div>
+    <select id="fStatus">
+      <option value="">状态：全部</option>
+      <option value="none">未投递</option>
+      <option value="1">已投递</option>
+      <option value="2">笔试中</option>
+      <option value="3">面试中</option>
+      <option value="4">已拿offer</option>
+      <option value="5">已结束</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="fRef"> 有内推码</label>
+    <label class="chk"><input type="checkbox" id="fFree"> 免笔试</label>
+    <label class="chk"><input type="checkbox" id="fFav"> 仅收藏</label>
+    <select id="sortBy">
+      <option value="smart">智能排序</option>
+      <option value="deadline">截止时间 ↑</option>
+      <option value="date">更新日期 ↓</option>
+      <option value="company">公司名称</option>
+    </select>
+    <span class="result-count" id="resultCount"></span>
+  </div>
+
+  <div id="list"></div>
+  <button class="btn loadmore" id="loadMore">加载更多</button>
+
+  <div class="section-title">求职资源（国央企资料库 / 官方招聘平台）</div>
+  <div class="res-grid" id="resources"></div>
+</div>
+
+<div class="batchbar" id="batchbar">
+  <span id="batchInfo"></span>
+  <button class="btn btn-primary" id="batchOpen">打开下一个投递页</button>
+  <button class="btn" id="batchSkip">跳过</button>
+  <button class="btn" id="batchExit">退出批量投递</button>
+</div>
+
+<div class="modal-mask" id="modalMask"></div>
+<div class="modal" id="profileModal" style="width:520px;max-height:82vh;overflow-y:auto">
+  <h3>投递资料卡（保存在本机浏览器，供自动填表脚本使用）</h3>
+  <div class="p-group">基本信息</div>
+  <div class="row"><label>姓名</label><input id="p_name" placeholder=""></div>
+  <div class="row"><label>性别</label><input id="p_gender" placeholder="男 / 女"></div>
+  <div class="row"><label>出生年月</label><input id="p_birth" placeholder="2003.06"></div>
+  <div class="row"><label>籍贯</label><input id="p_hometown" placeholder=""></div>
+  <div class="row"><label>政治面貌</label><input id="p_political" placeholder="共青团员 / 中共党员 …"></div>
+  <div class="row"><label>手机</label><input id="p_phone" placeholder=""></div>
+  <div class="row"><label>邮箱</label><input id="p_email" placeholder=""></div>
+  <div class="row"><label>届别</label><input id="p_year" placeholder="2027届"></div>
+  <div class="row"><label>英语等级</label><input id="p_cet" placeholder="CET-6 / 雅思 7.0 …"></div>
+  <div class="p-group">教育经历</div>
+  <div class="row"><label>最高学历</label><input id="p_edu" placeholder="硕士"></div>
+  <div class="row"><label>毕业院校</label><input id="p_school" placeholder=""></div>
+  <div class="row"><label>专业</label><input id="p_major" placeholder=""></div>
+  <div class="row v-top"><label>教育经历</label><textarea id="p_education" placeholder="本科：XX大学 XX专业 2019.09-2023.06&#10;硕士：XX大学 XX专业 2023.09-2026.06"></textarea></div>
+  <div class="p-group">经历与简历</div>
+  <div class="row v-top"><label>实习经历</label><textarea id="p_internship" placeholder="公司 / 岗位 / 时间 / 做了什么"></textarea></div>
+  <div class="row v-top"><label>项目经历</label><textarea id="p_projects" placeholder=""></textarea></div>
+  <div class="row v-top"><label>自我介绍</label><textarea id="p_selfeval" placeholder="自我评价 / 个人简介，填表常用"></textarea></div>
+  <div class="row"><label>简历PDF路径</label><input id="p_resume_path" placeholder="/Users/.../简历.pdf（供自动上传）"></div>
+  <div class="p-group">求职意向</div>
+  <div class="row"><label>期望岗位</label><input id="p_expect_job" placeholder="AI产品经理 / 解决方案架构师"></div>
+  <div class="row"><label>期望城市</label><input id="p_expect_city" placeholder="深圳 / 北京 …"></div>
+  <div class="foot">
+    <button class="btn" id="profileExport" title="导出为 profile.json，供自动填表脚本使用">导出资料卡</button>
+    <button class="btn" id="profileClose">关闭</button>
+    <button class="btn btn-primary" id="profileSave">保存</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script id="jobs-data" type="application/json">__JOBS_DATA__</script>
+<script>
+(function(){
+"use strict";
+const DATA = JSON.parse(document.getElementById('jobs-data').textContent);
+const JOBS = DATA.jobs, RES = DATA.resources || [];
+const $ = id => document.getElementById(id);
+
+document.getElementById('metaLine').textContent =
+  `数据更新于 ${DATA.updated} · 共 ${DATA.count} 条岗位 · 来源：27届校招秋招实习内推表 + 毕业帮校招表格 · 截止时间为表格原文、未经核实（投递前以官网公告为准） · 投递状态仅保存在本机浏览器`;
+
+// ---------- state ----------
+const LS_STATUS = 'qz_status_v1', LS_FAV = 'qz_fav_v1', LS_PROFILE = 'qz_profile_v1';
+let statusMap = JSON.parse(localStorage.getItem(LS_STATUS) || '{}');
+let favSet = new Set(JSON.parse(localStorage.getItem(LS_FAV) || '[]'));
+let profile = JSON.parse(localStorage.getItem(LS_PROFILE) || '{}');
+const saveStatus = () => localStorage.setItem(LS_STATUS, JSON.stringify(statusMap));
+const saveFav = () => localStorage.setItem(LS_FAV, JSON.stringify([...favSet]));
+
+// ---------- stats ----------
+const statDefs = [
+  {label: '全部岗位', tag: '', count: JOBS.length},
+  {label: 'AI产品/解决方案', tag: 'AI产品/解决方案'},
+  {label: '央国企研发', tag: '央国企研发'},
+  {label: '大厂', tag: '大厂'},
+  {label: 'AI相关', tag: 'AI相关'},
+  {label: '实习', tag: '实习'},
+  {label: '有内推码', ref: true},
+];
+const statsEl = $('stats');
+statDefs.forEach(s => {
+  const n = s.count ?? JOBS.filter(j => s.ref ? j.ref_code : (j.tags||[]).includes(s.tag)).length;
+  const div = document.createElement('div');
+  div.className = 'stat';
+  div.innerHTML = `<div class="num">${n}</div><div class="label">${s.label}</div>`;
+  div.onclick = () => {
+    if (s.ref) { $('fRef').checked = true; } else { msTag.set([s.tag]); }
+    applyFilters();
+    document.querySelectorAll('.stat').forEach(x => x.classList.remove('active'));
+    div.classList.add('active');
+  };
+  statsEl.appendChild(div);
+});
+
+// ---------- multi-select component ----------
+function createMultiSelect(containerId, label, options) {
+  const box = document.getElementById(containerId);
+  const selected = new Set();
+  box.innerHTML = `<button class="ms-btn" type="button"><span class="txt">${label}：全部</span></button>
+    <div class="ms-panel">
+      <div class="ms-actions"><span data-a="all">全选</span><span data-a="clear">清空</span></div>
+      ${options.map(o => `<label class="chk"><input type="checkbox" value="${o}"> ${o}</label>`).join('')}
+    </div>`;
+  const btn = box.querySelector('.ms-btn'), txt = box.querySelector('.txt');
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.ms.open').forEach(m => { if (m !== box) m.classList.remove('open'); });
+    box.classList.toggle('open');
+  });
+  box.querySelector('.ms-panel').addEventListener('click', e => {
+    const a = e.target.dataset.a;
+    if (a === 'all' || a === 'clear') {
+      const check = a === 'all';
+      box.querySelectorAll('input[type=checkbox]').forEach(c => { c.checked = check; });
+      selected.clear();
+      if (check) options.forEach(o => selected.add(o));
+      sync(); applyFilters();
+      e.stopPropagation();
+    }
+  });
+  box.querySelectorAll('input[type=checkbox]').forEach(c => {
+    c.addEventListener('change', () => {
+      if (c.checked) selected.add(c.value); else selected.delete(c.value);
+      sync(); applyFilters();
+    });
+  });
+  function sync() {
+    txt.innerHTML = selected.size === 0 ? `${label}：全部` :
+      selected.size <= 2 ? `${label}：<span class="cnt">${[...selected].join('、')}</span>` :
+      `${label}：<span class="cnt">已选 ${selected.size} 项</span>`;
+  }
+  return {
+    selected,
+    set(vals) { // vals: array
+      selected.clear();
+      box.querySelectorAll('input[type=checkbox]').forEach(c => {
+        c.checked = vals.includes(c.value);
+        if (c.checked) selected.add(c.value);
+      });
+      sync();
+    },
+    clear() { this.set([]); }
+  };
+}
+
+const msTag = createMultiSelect('msTag', '方向', ['AI产品/解决方案', '央国企研发', '大厂', 'AI相关', '实习']);
+const msType = createMultiSelect('msType', '性质', ['央国企', '民企', '外企', '银行', '事业单位', '合资']);
+const msJtype = createMultiSelect('msJtype', '类型', ['27届秋招', '实习', '提前批', '春招', '补录']);
+const msCity = createMultiSelect('msCity', '城市', ['深圳', '北京', '上海', '广州', '杭州', '成都', '武汉', '西安', '南京', '苏州',
+  '天津', '重庆', '长沙', '合肥', '青岛', '厦门', '珠海', '东莞', '佛山', '宁波', '无锡', '郑州', '福州', '济南',
+  '大连', '沈阳', '南昌', '昆明', '贵阳', '全国多地', '远程/线上', '海外']);
+document.addEventListener('click', () => document.querySelectorAll('.ms.open').forEach(m => m.classList.remove('open')));
+
+// ---------- filter & render ----------
+const PAGE = 50;
+let filtered = [], shown = 0;
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+
+function deadlineInfo(j) {
+  if (!j.deadline) return null;
+  const d = new Date(j.deadline + 'T00:00:00');
+  const days = Math.round((d - TODAY) / 86400000);
+  return {days, text: j.deadline};
+}
+
+function applyFilters() {
+  const q = $('q').value.trim().toLowerCase();
+  const st = $('fStatus').value;
+  const needRef = $('fRef').checked, needFree = $('fFree').checked, onlyFav = $('fFav').checked;
+  const tags = msTag.selected, ctypes = msType.selected, jts = msJtype.selected, cities = msCity.selected;
+  filtered = JOBS.filter(j => {
+    if (q) {
+      const hay = ((j.company||'') + ' ' + (j.title||'') + ' ' + (j.note||'') + ' ' + (j.city||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (tags.size && !(j.tags||[]).some(t => tags.has(t))) return false;
+    if (ctypes.size && ![...ctypes].some(c => (j.company_type||'').includes(c) || (j.industry||'').includes(c))) return false;
+    if (jts.size && ![...jts].some(t => (j.job_type||'').includes(t))) return false;
+    if (cities.size && !(j.city_tags||[]).some(c => cities.has(c))) return false;
+    if (needRef && !j.ref_code) return false;
+    if (needFree && j.free_exam !== '是') return false;
+    if (onlyFav && !favSet.has(j.id)) return false;
+    const s = statusMap[j.id] || 0;
+    if (st === 'none' && s !== 0) return false;
+    if (st && st !== 'none' && s !== Number(st)) return false;
+    return true;
+  });
+  // sort
+  const sb = $('sortBy').value;
+  const withDl = j => j.deadline ? 0 : 1;
+  if (sb === 'smart') {
+    filtered.sort((a,b) => {
+      const da = deadlineInfo(a), db = deadlineInfo(b);
+      const ea = da && da.days >= 0 ? 0 : (da ? 2 : 1);   // 未过期优先，无日期次之，过期沉底
+      const eb = db && db.days >= 0 ? 0 : (db ? 2 : 1);
+      if (ea !== eb) return ea - eb;
+      if (ea === 0) return da.days - db.days;
+      return (b.date||'').localeCompare(a.date||'');
+    });
+  } else if (sb === 'deadline') {
+    filtered.sort((a,b) => (withDl(a)-withDl(b)) || (a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  } else if (sb === 'date') {
+    filtered.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  } else {
+    filtered.sort((a,b) => (a.company||'').localeCompare(b.company||'', 'zh'));
+  }
+  shown = 0;
+  $('list').innerHTML = '';
+  renderMore();
+  $('resultCount').textContent = `匹配 ${filtered.length} 条`;
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderMore() {
+  const list = $('list');
+  const slice = filtered.slice(shown, shown + PAGE);
+  for (const j of slice) {
+    const st = statusMap[j.id] || 0;
+    const di = deadlineInfo(j);
+    const el = document.createElement('div');
+    el.className = 'job' + (st === 5 ? ' done' : '');
+    const tagsHtml = (j.tags||[]).map(t => {
+      const cls = t === '央国企研发' ? 'green' : (t === '大厂' ? 'orange' : 'blue');
+      return `<span class="tag ${cls}">${t}</span>`;
+    }).join('');
+    let dlHtml = '';
+    const dlMark = j.deadline_inferred ? '（年份为推断）' : '';
+    if (di) {
+      if (di.days < 0) dlHtml = `<span class="deadline">已截止 ${di.text}${dlMark}</span>`;
+      else if (di.days <= 7) dlHtml = `<span class="deadline urgent">${di.text} · 剩 ${di.days} 天${dlMark}</span>`;
+      else dlHtml = `<span class="deadline">截止 ${di.text}${dlMark}</span>`;
+    } else if (j.deadline_text) {
+      dlHtml = `<span class="deadline">${esc(j.deadline_text.slice(0,30))}</span>`;
+    }
+    el.innerHTML = `
+      <div class="job-main">
+        <div class="job-line1">
+          <span class="fav ${favSet.has(j.id)?'on':''}" data-act="fav" title="收藏">★</span>
+          <span class="company">${esc(j.company)}</span>
+          ${j.company_type ? `<span class="tag">${esc(j.company_type)}</span>` : ''}
+          ${j.free_exam === '是' ? '<span class="tag green">免笔试</span>' : ''}
+          ${tagsHtml}
+        </div>
+        <div class="job-title">${esc((j.title||'').slice(0,120)) || '<span style="color:#8f959e">岗位详情见投递页</span>'}</div>
+        <div class="job-sub">
+          ${j.city ? `<span>${esc(j.city.slice(0,40))}</span>` : ''}
+          ${j.edu ? `<span>${esc(j.edu)}</span>` : ''}
+          ${j.job_type ? `<span>${esc(j.job_type)}</span>` : ''}
+          ${j.source ? `<span>来源：${esc(j.tab)}</span>` : ''}
+          ${dlHtml}
+        </div>
+        ${j.note ? `<div class="job-note">${esc(j.note)}</div>` : ''}
+      </div>
+      <div class="job-side">
+        <select class="status-sel s${st}" data-act="status">
+          <option value="0" ${st===0?'selected':''}>未投递</option>
+          <option value="1" ${st===1?'selected':''}>已投递</option>
+          <option value="2" ${st===2?'selected':''}>笔试中</option>
+          <option value="3" ${st===3?'selected':''}>面试中</option>
+          <option value="4" ${st===4?'selected':''}>已拿offer</option>
+          <option value="5" ${st===5?'selected':''}>已结束</option>
+        </select>
+        <div class="job-actions">
+          ${j.ref_code ? `<button class="mini-btn" data-act="ref" title="复制内推码">内推码</button>` : ''}
+          ${j.apply_url ? `<button class="mini-btn apply" data-act="apply">去投递</button>` : ''}
+          ${j.notice_url ? `<button class="mini-btn" data-act="notice">公告</button>` : ''}
+          ${j.note ? `<button class="mini-btn" data-act="note">备注</button>` : ''}
+          ${j.contact ? `<button class="mini-btn" data-act="contact" title="${esc(j.contact)}">联系人</button>` : ''}
+        </div>
+      </div>`;
+    el.addEventListener('click', e => {
+      const act = e.target.dataset.act;
+      if (!act) return;
+      if (act === 'apply') { window.open(j.apply_url, '_blank'); setStatus(j.id, 1, el); }
+      else if (act === 'notice') window.open(j.notice_url, '_blank');
+      else if (act === 'ref') { navigator.clipboard.writeText(j.ref_code).then(() => toast('内推码已复制：' + j.ref_code)); }
+      else if (act === 'contact') { navigator.clipboard.writeText(j.contact).then(() => toast('联系方式已复制')); }
+      else if (act === 'note') el.querySelector('.job-note').classList.toggle('open');
+      else if (act === 'fav') {
+        if (favSet.has(j.id)) favSet.delete(j.id); else favSet.add(j.id);
+        saveFav(); e.target.classList.toggle('on');
+      }
+    });
+    el.addEventListener('change', e => {
+      if (e.target.dataset.act === 'status') setStatus(j.id, Number(e.target.value), el);
+    });
+    list.appendChild(el);
+  }
+  shown += slice.length;
+  $('loadMore').style.display = shown < filtered.length ? 'block' : 'none';
+  $('loadMore').textContent = `加载更多（已显示 ${shown}/${filtered.length}）`;
+}
+
+function setStatus(id, v, el) {
+  if (v === 0) delete statusMap[id]; else statusMap[id] = v;
+  saveStatus();
+  if (el) {
+    const sel = el.querySelector('.status-sel');
+    sel.className = 'status-sel s' + v;
+    sel.value = String(v);
+    el.classList.toggle('done', v === 5);
+  }
+  const names = {1:'已标记为已投递',2:'已标记为笔试中',3:'已标记为面试中',4:'已标记为已拿offer',5:'已标记为已结束',0:'已恢复为未投递'};
+  toast(names[v] || '已更新');
+}
+
+// ---------- events ----------
+['q','fStatus','sortBy'].forEach(id => $(id).addEventListener('input', applyFilters));
+['fRef','fFree','fFav'].forEach(id => $(id).addEventListener('change', applyFilters));
+$('loadMore').onclick = renderMore;
+
+// ---------- toast ----------
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ---------- profile modal ----------
+const PROF_KEYS = ['name','gender','birth','hometown','political','phone','email','year','cet',
+                   'edu','school','major','education',
+                   'internship','projects','selfeval','resume_path',
+                   'expect_job','expect_city'];
+$('profileBtn').onclick = () => {
+  PROF_KEYS.forEach(k => $('p_' + k).value = profile[k] || '');
+  $('modalMask').style.display = 'block'; $('profileModal').style.display = 'block';
+};
+$('profileClose').onclick = $('modalMask').onclick = () => {
+  $('modalMask').style.display = 'none'; $('profileModal').style.display = 'none';
+};
+$('profileSave').onclick = () => {
+  PROF_KEYS.forEach(k => profile[k] = $('p_' + k).value.trim());
+  localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
+  $('profileClose').click();
+  toast('资料卡已保存');
+};
+$('profileExport').onclick = () => {
+  PROF_KEYS.forEach(k => profile[k] = $('p_' + k).value.trim());
+  const blob = new Blob([JSON.stringify(profile, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'profile.json';
+  a.click();
+  toast('已下载 profile.json，放到 data/ 目录供 auto_apply.py 使用');
+};
+
+// ---------- export ----------
+$('exportBtn').onclick = () => {
+  const applied = JOBS.filter(j => statusMap[j.id] >= 1);
+  const favs = JOBS.filter(j => favSet.has(j.id) && !statusMap[j.id]);
+  let txt = '# 秋招投递清单（导出于 ' + new Date().toLocaleString('zh-CN') + '）\n\n';
+  const fmt = j => `- [${['未投','已投','笔试','面试','offer','结束'][statusMap[j.id]||0]}] ${j.company} | ${j.title||'-'} | ${j.city||'-'} | 截止:${j.deadline||j.deadline_text||'-'}${j.ref_code?' | 内推码:'+j.ref_code:''}\n  ${j.apply_url||''}`;
+  txt += '## 已投递/进行中（' + applied.length + '）\n' + (applied.map(fmt).join('\n') || '（无）');
+  txt += '\n\n## 收藏待投（' + favs.length + '）\n' + (favs.map(fmt).join('\n') || '（无）');
+  const blob = new Blob([txt], {type: 'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '秋招投递清单.md';
+  a.click();
+  toast('清单已导出');
+};
+
+$('resetBtn').onclick = () => {
+  if (!confirm('确定清除所有投递状态和收藏？（不影响原始数据）')) return;
+  localStorage.removeItem(LS_STATUS); localStorage.removeItem(LS_FAV);
+  statusMap = {}; favSet = new Set();
+  applyFilters(); toast('已重置');
+};
+
+// ---------- resources ----------
+const resEl = $('resources');
+RES.forEach(r => {
+  const div = document.createElement('div');
+  div.className = 'res';
+  const url = (r.url || '').match(/https?:\/\/[^\s]+/);
+  div.innerHTML = `<div class="rtype">${esc(r.type)}</div><div>${esc(r.name || '')}</div>` +
+    (url ? `<a href="${url[0]}" target="_blank">${esc(url[0])}</a>` : `<div style="color:#8f959e;font-size:12px">${esc((r.url||'').slice(0,80))}</div>`);
+  resEl.appendChild(div);
+});
+
+// ---------- batch apply ----------
+let batchQueue = [], batchIdx = 0;
+function startBatch() {
+  batchQueue = filtered.filter(j => j.apply_url && !statusMap[j.id]);
+  if (!batchQueue.length) { toast('当前筛选下没有待投递岗位'); return; }
+  batchIdx = 0;
+  $('batchbar').classList.add('show');
+  updateBatch();
+}
+function updateBatch() {
+  if (batchIdx >= batchQueue.length) {
+    $('batchInfo').textContent = '批量投递完成';
+    $('batchOpen').disabled = true;
+    return;
+  }
+  const j = batchQueue[batchIdx];
+  $('batchInfo').textContent = `待投 ${batchIdx+1}/${batchQueue.length}：${j.company} ${j.ref_code ? '（内推码已复制）' : ''}`;
+}
+$('batchOpen').onclick = () => {
+  const j = batchQueue[batchIdx];
+  if (!j) return;
+  if (j.ref_code) navigator.clipboard.writeText(j.ref_code);
+  window.open(j.apply_url, '_blank');
+  setStatus(j.id, 1, null);
+  batchIdx++;
+  updateBatch();
+  applyFiltersKeepScroll();
+};
+$('batchSkip').onclick = () => { batchIdx++; updateBatch(); };
+$('batchExit').onclick = () => { $('batchbar').classList.remove('show'); batchQueue = []; applyFilters(); };
+function applyFiltersKeepScroll() { applyFilters(); }
+
+// 双击统计区"全部岗位"卡片以外：顶部加批量入口
+const batchBtn = document.createElement('button');
+batchBtn.className = 'btn btn-primary';
+batchBtn.textContent = '批量投递当前筛选';
+batchBtn.onclick = startBatch;
+document.querySelector('.header-actions').prepend(batchBtn);
+
+// init
+applyFilters();
+})();
+</script>
+</body>
+</html>

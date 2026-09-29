@@ -1,0 +1,16 @@
+# 个人资料卡（隐私，不提交）
+data/profile.json
+
+# 抓取中间产物
+data/sheet1_raw.jsonp
+data/sheet1_tab_main.json
+data/sheet1_main_decoded.json
+data/sheet1_main_rows.json
+data/sheet2_zongbiao_decoded.json
+
+# 系统文件
+.DS_Store
+__pycache__/
+node_modules/
+dist/
+.workbuddy/
