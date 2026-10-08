@@ -56,6 +56,10 @@ cp 秋招岗位看板.html dist/index.html
 - `dist/index.html` 即看板完整单文件（数据已内嵌，无需后端）
 - 修改 `dashboard_template.html` 后运行 `python3 data/build_dashboard.py && cp 秋招岗位看板.html dist/index.html`，提交推送即可上线
 
+## 自动更新（GitHub Actions）
+
+`.github/workflows/daily-refresh.yml` 每天北京时间 22:00 自动抓取两张源表、重建看板并推送，Cloudflare Pages 随 push 自动部署——全程无人值守。也可在仓库 Actions 页面手动触发（workflow_dispatch）。数据无变化时自动跳过提交。
+
 ## 数据来源
 
 - [27届校招秋招实习内推表](https://docs.qq.com/smartsheet/DWnBUVm9OVFhuSEJ4?tab=twLpD9&viewId=vPmpSf)
