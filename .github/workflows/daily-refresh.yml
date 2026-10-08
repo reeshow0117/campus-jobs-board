@@ -1,0 +1,40 @@
+name: Daily data refresh
+
+on:
+  schedule:
+    # 每天北京时间 22:00（UTC 14:00）自动抓取最新岗位数据
+    - cron: "0 14 * * *"
+  workflow_dispatch: # 也支持在 Actions 页面手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch & rebuild dashboard
+        run: |
+          python3 data/fetch_smartsheet.py
+          python3 data/fetch_sheet2.py
+          python3 data/merge_jobs.py
+          python3 data/build_dashboard.py
+          cp 秋招岗位看板.html dist/index.html
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/jobs_merged.json data/sheet1_jobs.json data/sheet2_jobs.json 秋招岗位看板.html dist/index.html
+          if git diff --cached --quiet; then
+            echo "数据无变化，跳过提交"
+          else
+            git commit -m "data: auto refresh jobs $(date +%Y-%m-%d)"
+            git push
+          fi
