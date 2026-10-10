@@ -35,6 +35,8 @@ FONT_SETS = [
     # Linux: fonts-noto-cjk-extra 的宋体风格衬线体
     ("/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc", 2,
      "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 2),
+    # 部分发行版只包含 Regular 合集，仍用衬线体；加粗由 ReportLab 合成。
+    ("/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc", 2, None, 0),
 ]
 
 SECTION_MAP = {
