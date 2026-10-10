@@ -3,7 +3,7 @@
 import json, os
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-tpl = open(os.path.join(BASE, "dashboard_template.html"), encoding="utf-8").read()
+tpl = open(os.path.join(BASE, "web", "dashboard_template.html"), encoding="utf-8").read()
 data = open(os.path.join(BASE, "data", "jobs_merged.json"), encoding="utf-8").read()
 
 # 防止 JSON 中的 </script> 提前闭合标签

@@ -13,11 +13,10 @@ echo "==> [2/4] 抓取 毕业帮校招表格（内嵌智能表格）"
 
 echo "==> [3/4] 合并去重 + 生成看板"
 "$PY" data/merge_jobs.py
-"$PY" data/build_dashboard.py
-cp 秋招岗位看板.html dist/index.html
+"$PY" scripts/build_site.py
 
 echo "==> [4/4] 提交并推送（Cloudflare Pages 会自动部署）"
-git add data/jobs_merged.json data/sheet1_jobs.json data/sheet2_jobs.json 秋招岗位看板.html dist/index.html
+git add data/jobs_merged.json data/sheet1_jobs.json data/sheet2_jobs.json 秋招岗位看板.html dist/index.html dist/resume.html dist/jobs_slim.json
 if git diff --cached --quiet; then
   echo "数据无变化，跳过提交"
 else

@@ -1,0 +1,46 @@
+name: Quality checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install CJK serif font and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk-extra
+          python -m pip install -e '.[test]'
+      - name: Build site and verify generated assets
+        run: |
+          python scripts/build_site.py
+          git diff --exit-code -- 秋招岗位看板.html dist/index.html dist/resume.html dist/jobs_slim.json
+      - name: Check Python and front-end syntax
+        run: |
+          python -m compileall -q agent data scripts tests
+          python -c 'import pathlib,re; print(re.search(r"<script>([\s\S]*?)</script>", pathlib.Path("web/resume.html").read_text()).group(1))' | node --check -
+        shell: bash
+      - name: Run offline regression tests
+        run: |
+          python -m unittest discover -s tests -v
+          python agent/selfcheck.py
+      - name: Check for accidental private files in git
+        run: |
+          if git ls-files --cached | grep -E '^(简历资料库/|agent/profiles/|agent/state/|outputs/|\.env$|\.env\.|data/profile\.json$)'; then
+            echo 'Private files must never be tracked.' >&2
+            exit 1
+          fi

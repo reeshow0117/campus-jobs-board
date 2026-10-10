@@ -1,6 +1,21 @@
 # 个人资料卡（隐私，不提交）
 data/profile.json
 
+# 简历资料库与定制产出（含 PII，绝不提交公开仓库）
+简历资料库/
+秋招网申填写素材_整合版.md
+agent/profiles/
+agent/state/
+agent/fonts/
+outputs/
+.env
+.env.*
+.venv/
+.pytest_cache/
+*.egg-info/
+# 旧版未接入的代理实验代码不进入生产仓库
+worker/
+
 # 抓取中间产物
 data/sheet1_raw.jsonp
 data/sheet1_tab_main.json

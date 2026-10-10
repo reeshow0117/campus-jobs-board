@@ -24,14 +24,16 @@ jobs:
           python3 data/fetch_smartsheet.py
           python3 data/fetch_sheet2.py
           python3 data/merge_jobs.py
-          python3 data/build_dashboard.py
-          cp 秋招岗位看板.html dist/index.html
+          python3 scripts/build_site.py
+
+      - name: Check recommendation rules before publishing
+        run: python3 agent/selfcheck.py
 
       - name: Commit & push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/jobs_merged.json data/sheet1_jobs.json data/sheet2_jobs.json 秋招岗位看板.html dist/index.html
+          git add data/jobs_merged.json data/sheet1_jobs.json data/sheet2_jobs.json 秋招岗位看板.html dist/index.html dist/resume.html dist/jobs_slim.json
           if git diff --cached --quiet; then
             echo "数据无变化，跳过提交"
           else

@@ -9,6 +9,29 @@
 - **岗位看板**（`秋招岗位看板.html`，单文件、离线可用）：14450+ 条岗位，多选筛选（方向/企业性质/类型/城市）、全文搜索、截止倒计时、内推码一键复制、投递状态追踪（未投/已投/笔试/面试/offer，存本机浏览器）、收藏、导出投递清单
 - **半自动填表**（`auto_apply.py`）：打开投递页 → 扫描表单 → 按你的资料卡自动填姓名/手机/邮箱/教育经历/实习经历等 → 自动上传简历 PDF → 截图确认，**不自动提交**
 
+## 项目结构与开发
+
+- `web/`：看板模板和简历定制前端（源码）；`dist/`：可部署的静态产物。
+- `data/`：抓取、合并与岗位快照；`scripts/build_site.py`：统一构建入口。
+- `agent/`：规则推荐、简历生成、PDF 排版和 FastAPI 接口；`tests/`：无真实密钥、无私人简历的回归测试。
+- `.github/workflows/`：质量检查与每日数据刷新；`outputs/`、`简历资料库/`、`agent/profiles/`、`agent/state/` 均不进入公开仓库。
+
+```bash
+# 静态构建无需第三方依赖
+python3 scripts/build_site.py
+
+# 本地后端 / 自动测试（使用隔离虚拟环境）
+python3 -m venv .venv
+.venv/bin/pip install -e '.[test]'
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python agent/selfcheck.py
+
+# 有 LLM 环境变量时才能生成简历；仅本机个人库模式可读取私库
+QIUZHAO_PRIVATE_VAULT=1 .venv/bin/python agent/server.py --host 127.0.0.1 --port 8000
+```
+
+`秋招岗位看板.html` 可离线打开；简历页需后端支持，当前**并未开放公网简历生成 API**。服务端使用 `QIUZHAO_LLM_API_KEY`、`QIUZHAO_LLM_BASE_URL`、`QIUZHAO_LLM_MODEL` 环境变量，不要写入仓库。想开放给所有人之前，需先部署认证/限流/HTTPS 与资源隔离。
+
 ## 快速开始（看板）
 
 直接用浏览器打开 `秋招岗位看板.html` 即可，无需安装任何东西。数据为抓取时点的快照。
@@ -44,8 +67,7 @@ python3 auto_apply.py "https://投递链接" --refcode 内推码
 python3 data/fetch_smartsheet.py   # 抓内推表
 python3 data/fetch_sheet2.py       # 抓毕业帮表
 python3 data/merge_jobs.py         # 合并清洗
-python3 data/build_dashboard.py    # 重新生成看板 HTML
-cp 秋招岗位看板.html dist/index.html
+python3 scripts/build_site.py       # 同时更新看板、简历页及轻量岗位索引
 ```
 
 ## 部署（Cloudflare Pages · Git 联动）
@@ -54,7 +76,7 @@ cp 秋招岗位看板.html dist/index.html
 
 - 构建配置：Framework preset = None，Build command 留空，Build output directory = `dist`
 - `dist/index.html` 即看板完整单文件（数据已内嵌，无需后端）
-- 修改 `dashboard_template.html` 后运行 `python3 data/build_dashboard.py && cp 秋招岗位看板.html dist/index.html`，提交推送即可上线
+- 修改 `web/dashboard_template.html` 或 `web/resume.html` 后运行 `python3 scripts/build_site.py`，经 CI 检查后提交。推送 `main` 会触发 Pages 的静态站点更新，**不会部署简历后端**
 
 ## 自动更新（GitHub Actions）
 
@@ -69,5 +91,6 @@ cp 秋招岗位看板.html dist/index.html
 
 ## 隐私说明
 
-- 投递状态、收藏、资料卡均保存在**你自己浏览器/本机**，不上传任何服务器
-- `data/profile.json` 已在 .gitignore 中排除，不会被提交
+- 看板投递状态、收藏和个人资料默认只留本机；点击「生成简历」后，你选择的候选人素材和 JD 会当次发往所连接的后端/模型服务处理，尚未承诺端到端不上传
+- `data/profile.json`、私人资料库、照片、生成简历、环境变量和本地追踪状态均被 `.gitignore` 排除；静态岗位快照属于公开数据
+- 公网简历 API 未接入身份认证及用量限制，不应直接对外提供服务

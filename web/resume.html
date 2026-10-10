@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>简历定制 · 秋招助手</title>
+<style>
+  :root {
+    --accent: #185FA5;
+    --text-1: #1a1a1a; --text-2: #555; --text-3: #999;
+    --bg: #f7f7f5; --card: #fff; --border: rgba(0,0,0,.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text-1); font-size: 14px; line-height: 1.6; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+  .topbar h1 { font-size: 20px; font-weight: 600; }
+  .topbar h1 span { color: var(--accent); }
+  .topbar a.back { color: var(--text-2); text-decoration: none; font-size: 13px; }
+  .topbar a.back:hover { color: var(--accent); }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .tabs button { background: none; border: none; padding: 8px 16px; font-size: 14px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  label { display: block; font-size: 12px; color: var(--text-2); margin: 10px 0 4px; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: #fff; color: var(--text-1);
+  }
+  textarea { resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 80px 1fr 1fr 130px; gap: 8px; align-items: end; }
+  .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text-1); font-size: 13px; cursor: pointer; text-decoration: none; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { opacity: .9; color: #fff; }
+  .btn.danger:hover { border-color: #c00; color: #c00; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .material-item { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .material-item .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .material-item .mid { font-weight: 600; color: var(--accent); font-size: 13px; }
+  .muted { color: var(--text-3); font-size: 12px; }
+  .log { font-size: 12px; color: var(--text-2); margin: 8px 0; min-height: 18px; }
+  .log .ok { color: #1a7f37; } .log .err { color: #c00; }
+  .warn-box { background: #fff8e6; border: 1px solid #f0c36d; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
+  .result-md h2, .result-md h3, .result-md h4 { margin: 14px 0 6px; font-weight: 600; }
+  .result-md h2 { font-size: 17px; } .result-md h3 { font-size: 15px; } .result-md h4 { font-size: 14px; }
+  .result-md ul { padding-left: 20px; } .result-md p { margin: 6px 0; }
+  .result-md table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .result-md td { border: 1px solid var(--border); padding: 5px 8px; }
+  .cite { color: var(--text-3); font-size: 11px; }
+  .job-pick { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 8px; }
+  .job-pick .j { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .job-pick .j:hover { background: #f0f6fc; }
+  .job-pick .j .c { color: var(--text-2); font-size: 12px; }
+  .privacy { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+  .hidden { display: none; }
+  .notice { background:#edf5fb; color:#245779; border:1px solid #c9ddea; border-radius:8px; padding:10px 12px; margin:0 0 14px; font-size:13px; }
+  .result-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .pdf-frame { width:100%; height:72vh; border:1px solid var(--border); border-radius:8px; margin-top:12px; background:#fff; }
+  code { background: #f0f0ee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>简历<span>定制</span></h1>
+      <div class="muted">按岗位 JD 重新组合经历 · 预览并下载单页 A4 简历</div>
+    </div>
+    <a class="back" href="index.html">&larr; 返回岗位看板</a>
+  </div>
+
+  <div id="serviceNotice" class="notice">本页可先整理资料库；生成与 PDF 预览需连接简历生成服务，未连接时不会把资料发送出去。</div>
+  <div class="tabs">
+    <button class="on" data-tab="profile">我的资料库</button>
+    <button data-tab="gen">定制简历</button>
+    <button data-tab="settings">设置</button>
+  </div>
+
+  <!-- ============ 资料库 ============ -->
+  <div id="tab-profile">
+    <div class="card">
+      <h2>基本信息</h2>
+      <div class="row">
+        <div><label>姓名</label><input type="text" id="p-name"></div>
+        <div><label>最高学历</label><input type="text" id="p-edu" placeholder="硕士 / 本科"></div>
+        <div><label>毕业时间</label><input type="text" id="p-year" placeholder="2027届"></div>
+        <div><label>求职意向</label><input type="text" id="p-expect_job" placeholder="AI产品经理 / 解决方案架构师"></div>
+        <div><label>期望城市</label><input type="text" id="p-expect_city" placeholder="深圳"></div>
+        <div><label>手机 / 邮箱</label><input type="text" id="p-contact" placeholder="可选，生成简历抬头用"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>证件照</h2>
+      <input type="file" id="photoFile" accept="image/jpeg,image/png">
+      <div class="privacy">JPG / PNG，最大 2 MB。本次生成时上传给简历服务用于 PDF 排版；照片不保存在浏览器或平台数据库，刷新后需重选。本机私人资料库模式自动使用已有证件照。</div>
+    </div>
+    <div class="card">
+      <h2>经历母库 <span class="muted">—— 所有简历只允许从这里取材，填得越细定制越准</span></h2>
+      <div id="materials"></div>
+      <button class="btn" id="addMaterial">+ 添加经历</button>
+      <button class="btn" id="loadExample">载入示例模板</button>
+    </div>
+
+    <div class="card">
+      <button class="btn primary" id="saveProfile">保存资料库</button>
+      <button class="btn" id="exportProfile">导出备份</button>
+      <button class="btn" id="importProfile">导入</button>
+      <input type="file" id="importFile" accept=".json" class="hidden">
+      <div class="privacy">资料保存在本机浏览器；点击生成时，当前资料和 JD 会发送到你连接的简历服务处理，不会默认保存到服务端。换电脑请导出备份。</div>
+    </div>
+  </div>
+
+  <!-- ============ 定制简历 ============ -->
+  <div id="tab-gen" class="hidden">
+    <div class="card">
+      <h2>目标岗位</h2>
+      <div class="row">
+        <div><label>公司</label><input type="text" id="g-company" placeholder="虾皮-Sea"></div>
+        <div><label>岗位</label><input type="text" id="g-title" placeholder="电商产品经理"></div>
+      </div>
+      <label>JD 全文（粘贴招聘启事正文，越完整越准；不填则只用岗位名称）</label>
+      <textarea id="g-jd" rows="6" placeholder="岗位职责：…&#10;任职要求：…"></textarea>
+      <label>或从岗位库搜索（首次加载约需几秒）</label>
+      <input type="text" id="jobSearch" placeholder="输入公司或岗位关键词搜索…">
+      <div class="job-pick hidden" id="jobList"></div>
+    </div>
+
+    <div class="card">
+      <div id="privateChoice" class="notice hidden"><label style="margin:0;color:inherit"><input type="checkbox" id="usePrivateVault"> 使用本机私人 Obsidian 资料库（仅本机服务可选，不上传到网页资料库）</label></div>
+      <button class="btn primary" id="genBtn">生成定制简历</button>
+      <span class="muted" id="genHint"></span>
+      <div class="log" id="genLog"></div>
+    </div>
+
+    <div class="warn-box hidden" id="warnBox"></div>
+    <div class="card hidden" id="resultCard">
+      <h2>生成结果</h2>
+      <div class="result-actions">
+        <button class="btn" id="copyMd">复制带溯源标记的稿件</button>
+        <button class="btn hidden" id="previewPdf">预览正式 PDF</button>
+        <button class="btn primary hidden" id="dlPdf">下载单页 PDF</button>
+      </div>
+      <div class="muted" style="margin:10px 0">➢ 左对齐 · 宋体/衬线体 · 层次加粗 · 有照片时自动避让分隔线。请核对真实 JD 和经历事实后再投递。</div>
+      <div class="result-md" id="resultMd"></div>
+      <iframe id="pdfFrame" class="pdf-frame hidden" title="正式 PDF 预览"></iframe>
+    </div>
+  </div>
+
+  <!-- ============ 设置 ============ -->
+  <div id="tab-settings" class="hidden">
+    <div class="card">
+      <h2>LLM 接入方式</h2>
+      <label><input type="radio" name="mode" value="proxy" checked> 服务端模式（推荐：整条链在服务器跑，支持下载 PDF）</label>
+      <label>服务器地址（同域部署时留空；跨域必须使用 HTTPS，本机调试可用 127.0.0.1）</label>
+      <input type="text" id="s-endpoint" placeholder="留空 = 同域 /api/resume；或填 https://你的简历服务域名">
+      <label><input type="radio" name="mode" value="byok"> 使用我自己的 OpenAI 兼容 key</label>
+      <div id="byokFields" class="hidden">
+        <label>Base URL</label><input type="text" id="s-base" placeholder="https://api.openai.com/v1">
+        <label>API Key</label><input type="password" id="s-key">
+        <label>模型名</label><input type="text" id="s-model">
+        <div class="privacy">key 只存本机浏览器，浏览器直连 LLM 接口（部分服务可能因 CORS 限制无法直连，此时请改用代理模式）。</div>
+      </div>
+      <div style="margin-top:12px"><button class="btn primary" id="saveSettings">保存设置</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= 状态与存储 ================= */
+const LS = { profile: "qz_profile_v1", materials: "qz_materials_v1", settings: "qz_settings_v1" };
+let materials = JSON.parse(localStorage.getItem(LS.materials) || "[]");
+let settings = JSON.parse(localStorage.getItem(LS.settings) || "{}");
+
+const $ = (id) => document.getElementById(id);
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function toast(msg) { const el = $("genHint"); el.textContent = msg; setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 3000); }
+
+/* ================= 选项卡 ================= */
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
+  b.classList.add("on");
+  ["profile","gen","settings"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
+});
+
+/* ================= 资料库编辑 ================= */
+const KIND_LABEL = { E: "教育", S: "实习", P: "项目", J: "技能/证书", A: "奖项", V: "社会实践" };
+function nextId(kind) {
+  let n = 1;
+  while (materials.some(m => m.id === kind + n)) n++;
+  return kind + n;
+}
+function renderMaterials() {
+  const box = $("materials");
+  box.innerHTML = "";
+  if (!materials.length) {
+    box.innerHTML = '<div class="muted" style="padding:8px 0">还没有经历，点「添加经历」或「载入示例模板」开始。</div>';
+    return;
+  }
+  materials.forEach((m, i) => {
+    const div = document.createElement("div");
+    div.className = "material-item";
+    div.innerHTML =
+      '<div class="head"><span class="mid">' + esc(m.id) + " · " + KIND_LABEL[m.id[0]] + '</span>' +
+      '<button class="btn danger" data-del="' + i + '">删除</button></div>' +
+      '<div class="row3">' +
+      '<div><label>编号</label><input type="text" value="' + esc(m.id) + '" disabled></div>' +
+      '<div><label>组织 / 学校 / 项目名</label><input type="text" data-f="org" data-i="' + i + '" value="' + esc(m.org) + '"></div>' +
+      '<div><label>角色</label><input type="text" data-f="role" data-i="' + i + '" value="' + esc(m.role) + '"></div>' +
+      '<div><label>时间段</label><input type="text" data-f="period" data-i="' + i + '" value="' + esc(m.period) + '"></div>' +
+      '</div>' +
+      '<label>要点（每行一条，写清做了什么 + 量化结果）</label>' +
+      '<textarea rows="3" data-f="body" data-i="' + i + '">' + esc(m.body) + '</textarea>';
+    box.appendChild(div);
+  });
+  box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    if (confirm("删除这条经历？")) { materials.splice(Number(b.dataset.del), 1); renderMaterials(); }
+  });
+  box.querySelectorAll("[data-f]").forEach(el => el.oninput = () => {
+    materials[Number(el.dataset.i)][el.dataset.f] = el.value;
+  });
+}
+$("addMaterial").onclick = () => {
+  const kind = prompt("经历类型：E=教育 S=实习 P=项目 J=技能/证书 A=奖项 V=社会实践", "S");
+  if (!kind || !KIND_LABEL[kind[0].toUpperCase()]) return;
+  materials.push({ id: nextId(kind[0].toUpperCase()), org: "", role: "", period: "", body: "" });
+  renderMaterials();
+};
+$("loadExample").onclick = () => {
+  if (materials.length && !confirm("会覆盖现有经历，继续？")) return;
+  materials = [
+    { id: "E1", org: "XX大学", role: "硕士研究生 · 计算机相关专业", period: "2024.09-2027.06", body: "- 研究方向：…\n- 英语：CET-6 xxx 分" },
+    { id: "S1", org: "某公司", role: "产品实习生", period: "2026.03-至今", body: "- 负责什么功能/项目，量化成果（覆盖 x 人、提升 x%）\n- 推动了什么协作" },
+    { id: "P1", org: "某项目", role: "独立开发", period: "2025", body: "- 做了什么、用了什么技术、结果如何" },
+    { id: "J1", org: "技能与证书", role: "-", period: "-", body: "- 证书 / 工具 / 语言" },
+  ];
+  renderMaterials();
+};
+$("saveProfile").onclick = () => {
+  // 看板与简历页共用资料卡键；只更新本页字段，保留看板里已有的投递信息。
+  const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
+  ["name","edu","year","expect_job","expect_city","contact"].forEach(k => profile[k] = $("p-"+k).value.trim());
+  localStorage.setItem(LS.profile, JSON.stringify(profile));
+  localStorage.setItem(LS.materials, JSON.stringify(materials));
+  toast("已保存到本机浏览器");
+};
+$("exportProfile").onclick = () => {
+  const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
+  const blob = new Blob([JSON.stringify({ profile, materials }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "秋招资料库备份.json";
+  a.click();
+};
+$("importProfile").onclick = () => $("importFile").click();
+$("importFile").onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (d.profile) Object.entries(d.profile).forEach(([k,v]) => { if ($("p-"+k)) $("p-"+k).value = v; });
+      if (Array.isArray(d.materials)) { materials = d.materials; renderMaterials(); }
+      toast("导入成功，记得点保存");
+    } catch { alert("文件格式不对"); }
+  };
+  r.readAsText(f);
+};
+
+/* ================= 岗位库搜索（懒加载轻量索引） ================= */
+let slimJobs = null;
+$("jobSearch").onfocus = async () => {
+  if (slimJobs) return;
+  $("jobSearch").placeholder = "正在加载岗位库（约 1MB）…";
+  try {
+    const r = await fetch("jobs_slim.json");
+    slimJobs = (await r.json()).jobs;
+    $("jobSearch").placeholder = "输入公司或岗位关键词搜索…";
+  } catch {
+    $("jobSearch").placeholder = "岗位库加载失败，请手动填写公司/岗位/JD";
+    slimJobs = [];
+  }
+};
+$("jobSearch").oninput = () => {
+  const q = $("jobSearch").value.trim().toLowerCase();
+  const list = $("jobList");
+  if (!q || !slimJobs || !slimJobs.length) { list.classList.add("hidden"); return; }
+  const hits = slimJobs.filter(j =>
+    (j.company + " " + j.title).toLowerCase().includes(q)).slice(0, 20);
+  list.innerHTML = hits.map(j =>
+    '<div class="j" data-id="' + j.id + '"><b>' + esc(j.company) + '</b> · ' + esc(j.title) +
+    '<div class="c">' + esc(j.city || "") + (j.deadline ? " · 截止 " + esc(j.deadline) : "") + '</div></div>'
+  ).join("") || '<div class="j muted">无匹配</div>';
+  list.classList.remove("hidden");
+  list.querySelectorAll(".j[data-id]").forEach(el => el.onclick = () => {
+    const j = slimJobs.find(x => x.id === Number(el.dataset.id));
+    $("g-company").value = j.company;
+    $("g-title").value = j.title;
+    list.classList.add("hidden");
+  });
+};
+
+/* ================= LLM 调用 ================= */
+async function fetchJson(url, options, timeoutMs) {
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      const r = await fetch(url, { ...options, signal: ctrl.signal });
+      clearTimeout(timer);
+      const data = await r.json();
+      if (!r.ok) {
+        if (r.status >= 400 && r.status < 500) throw new Error(data.error || ("HTTP " + r.status));
+        throw new Error(data.error || ("HTTP " + r.status));
+      }
+      return data;
+    } catch (e) {
+      if (attempt === 2 || /HTTP 4/.test(e.message)) throw e;
+      await new Promise(r => setTimeout(r, 2 ** attempt * 1000 + Math.random() * 1000));
+    }
+  }
+}
+async function llmChat(prompt, maxTokens) {
+  const s = settings;
+  if (s.mode === "byok") {
+    if (!s.baseUrl || !s.apiKey || !s.model) throw new Error("请先在「设置」里填 Base URL / Key / 模型名");
+    const data = await fetchJson(s.baseUrl.replace(/\/$/,"") + "/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + s.apiKey },
+      body: JSON.stringify({ model: s.model, messages: [{ role: "user", content: prompt }], temperature: 0.2, max_tokens: maxTokens || 2000 }),
+    }, 65000);
+    return data.choices[0].message.content;
+  }
+  throw new Error("服务端模式请直接生成，前端不单独调 LLM");
+}
+function serverBase() {
+  const value = (settings.endpoint || "").trim().replace(/\/$/, "");
+  if (!value) return "";
+  const url = new URL(value);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && ["127.0.0.1", "localhost", "::1"].includes(url.hostname))) {
+    throw new Error("简历资料只能发往 HTTPS 服务；本机调试可使用 127.0.0.1");
+  }
+  return value;
+}
+function currentSource() {
+  return $("usePrivateVault").checked && !$('privateChoice').classList.contains('hidden') ? "local_vault" : "browser";
+}
+function currentProfile() {
+  const profile = {};
+  ["name","edu","year","expect_job","expect_city","contact"].forEach(k => profile[k] = $("p-"+k).value.trim());
+  return profile;
+}
+function candidatePayload() {
+  const source = currentSource();
+  if (source === "local_vault") return { source };
+  const profile = currentProfile();
+  if (!profile.name || !materials.length) throw new Error("请先在「我的资料库」填写姓名、教育和经历，再生成简历");
+  return { source, profile, materials };
+}
+let photoDataUrl = null, pdfBlob = null, pdfObjectUrl = null;
+$("photoFile").onchange = async e => {
+  const file = e.target.files[0];
+  photoDataUrl = null;
+  if (!file) return;
+  if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 2_000_000) {
+    e.target.value = ""; alert("请选择 2 MB 以内的 JPG 或 PNG 照片"); return;
+  }
+  photoDataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+async function detectService() {
+  const box = $("serviceNotice");
+  try {
+    const r = await fetch(serverBase() + "/api/capabilities", { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error();
+    const cap = await r.json();
+    box.textContent = cap.llm ? "简历服务已连接。完成资料库后，粘贴完整 JD，生成并预览正式 PDF。" : "简历服务已连接，但模型尚未配置；暂时无法生成简历。";
+    $("privateChoice").classList.toggle("hidden", !cap.private_vault);
+  } catch {
+    box.textContent = "简历服务尚未连接：目前可以整理和备份资料库；生成与 PDF 预览需先连接服务。";
+    $("privateChoice").classList.add("hidden");
+    $("usePrivateVault").checked = false;
+  }
+}
+async function chatJson(prompt) {
+  let text = (await llmChat(prompt, 1500)).trim();
+  if (text.startsWith("```")) {
+    const lines = text.split("\n");
+    text = lines.slice(1, lines[lines.length-1].trim() === "```" ? -1 : undefined).join("\n");
+  }
+  return JSON.parse(text);
+}
+
+/* ================= 防编造自检（与后端规则一致） ================= */
+const MATERIAL_HEAD_RE = /^###\s+([A-Z]+\d+)\s*\|\s*([^|]+?)\s*\|/gm;
+function verifyResume(md, mats) {
+  const v = [];
+  const ids = new Set(mats.map(m => m.id));
+  const cited = new Set([...md.matchAll(/\[@([A-Z]+\d+)\]/g)].map(m => m[1]));
+  if (!cited.size) v.push("生成稿没有任何 [@编号] 引用，无法溯源");
+  cited.forEach(c => { if (!ids.has(c)) v.push("引用了素材库不存在的编号 @" + c); });
+  let m;
+  while ((m = MATERIAL_HEAD_RE.exec(md))) {
+    if (!ids.has(m[1])) v.push("出现素材库外的经历标题 " + m[1]);
+    else {
+      const orig = mats.find(x => x.id === m[1]);
+      if (orig && m[2] !== orig.org && !m[2].includes(orig.org)) v.push("编号 " + m[1] + " 的组织名被篡改：'" + m[2] + "' != '" + orig.org + "'");
+    }
+  }
+  return v;
+}
+
+/* ================= 生成主流程 ================= */
+function log(msg, cls) {
+  $("genLog").innerHTML += '<div class="' + (cls || "") + '">' + esc(msg) + "</div>";
+}
+function showResult(md, warnings) {
+  window._lastMd = md;
+  pdfBlob = null;
+  if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl);
+  pdfObjectUrl = null;
+  $("pdfFrame").src = "about:blank";
+  $("pdfFrame").classList.add("hidden");
+  if (warnings && warnings.length) {
+    $("warnBox").innerHTML = "<b>溯源未通过，PDF 导出已禁用，请核对：</b><br>" + warnings.map(esc).join("<br>");
+    $("warnBox").classList.remove("hidden");
+  }
+  $("resultMd").innerHTML = renderMarkdown(md);
+  $("resultCard").classList.remove("hidden");
+  const canPdf = settings.mode !== "byok" && !(warnings?.length);
+  $("previewPdf").classList.toggle("hidden", !canPdf);
+  $("dlPdf").classList.toggle("hidden", !canPdf);
+}
+
+async function postService(path, payload, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(serverBase() + path, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload), signal: ctrl.signal,
+    });
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      const detail = data.detail;
+      throw new Error(typeof detail === "string" ? detail : detail?.message || "服务返回错误 " + r.status);
+    }
+    return r;
+  } finally { clearTimeout(timer); }
+}
+async function genServerSide(company, title, jd) {
+  log("[1/2] 解析 JD → 从你的素材选材 → 写作与溯源自检…");
+  const r = await postService("/api/resume", { company, title, jd, ...candidatePayload() }, 180000);
+  const data = await r.json();
+  log("[2/2] 完成" + (data.warnings?.length ? "；有 " + data.warnings.length + " 处需修改" : "；溯源自检通过"),
+      data.warnings?.length ? "err" : "ok");
+  showResult(data.markdown, data.warnings);
+}
+
+$("genBtn").onclick = async () => {
+  const company = $("g-company").value.trim(), title = $("g-title").value.trim(), jd = $("g-jd").value.trim();
+  if (!title && !jd) { alert("请填写岗位名称或粘贴 JD 全文"); return; }
+  $("genLog").innerHTML = "";
+  $("warnBox").classList.add("hidden");
+  $("resultCard").classList.add("hidden");
+  $("genBtn").disabled = true;
+  try {
+    if (settings.mode !== "byok") {
+      await genServerSide(company, title, jd);
+      return;
+    }
+    // BYOK 模式：链路与自检在浏览器本地跑
+    const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
+    if (!materials.length) { alert("请先在「我的资料库」添加经历"); return; }
+    log("[1/4] 解析 JD…");
+    const jdJson = await chatJson(
+      "你是简历顾问。把下面的招聘信息解析成 JSON：\n" +
+      '{"role":"岗位定位一句话","must_have":["硬性要求"],"nice_to_have":["加分项"],"keywords":["关键词"]}\n' +
+      "公司：" + company + "\n岗位：" + title + "\nJD 全文：\n" + (jd || title).slice(0, 3000) + "\n只输出 JSON。");
+    log("  识别出 " + (jdJson.must_have || []).length + " 条硬性要求", "ok");
+
+    log("[2/4] 从资料库选材…");
+    const brief = materials.map(m =>
+      m.id + " | " + m.org + " | " + m.role + " | " + m.period + "\n  " + m.body.replace(/\s+/g, " ").slice(0, 200)
+    ).join("\n");
+    const sel = await chatJson(
+      "你是简历顾问。根据岗位要求和候选人素材库，挑选最相关的素材。\n岗位要求：" + JSON.stringify(jdJson) +
+      "\n素材库：\n" + brief +
+      '\n输出 JSON 数组：[{"id":"素材编号","angle":"这条经历怎么贴合岗位（一句话）"}]\n只选真正相关的，宁缺毋滥；只输出 JSON。');
+    const picked = sel.filter(s => s && materials.some(m => m.id === s.id));
+    if (!picked.length) throw new Error("LLM 认为素材库中没有匹配经历，请补充资料库");
+    log("  选中 " + picked.length + " 条素材：" + picked.map(s => s.id).join(", "), "ok");
+
+    log("[3/4] 生成定制简历…");
+    const pickedText = picked.map(s => {
+      const m = materials.find(x => x.id === s.id);
+      return "### " + m.id + " | " + m.org + " | " + m.role + " | " + m.period + "\n" + m.body + "\n（取材角度：" + (s.angle || "") + "）";
+    }).join("\n\n");
+    let md = await llmChat(
+      "你是资深简历写手。根据岗位要求和候选人选中的素材，写一份定制简历（Markdown）。\n\n" +
+      "【硬性规则，违反即废稿】\n1. 只允许改写、重组、强调素材库中已有的内容，禁止编造任何经历、公司、时间、数据\n" +
+      "2. 保留每条经历的标题行格式：### 编号 | 组织 | 角色 | 时间段（组织名一字不改）\n" +
+      "3. 每条要点末尾标注来源：[@编号]\n4. 素材中带【】或“填写”字样的是待补充占位，直接跳过\n" +
+      "5. 一页 A4 原则：每条要点一两句话，总篇幅宁短勿长\n\n" +
+      "【候选人基本信息】\n" + JSON.stringify(profile) + "\n\n" +
+      "【岗位要求】\n" + JSON.stringify(jdJson) + "\n目标公司：" + company + "；目标岗位：" + title + "\n\n" +
+      "【选中素材】\n" + pickedText + "\n\n" +
+      "【输出结构】\n# 姓名 - 求职意向（附联系方式一行）\n## 求职亮点（3 条以内，每条标注 [@编号]）\n" +
+      "## 教育经历 / ## 实习经历 / ## 项目经历 / ## 技能与证书\n只输出 Markdown 简历正文。", 3000);
+
+    log("[4/4] 防编造自检…");
+    let violations = verifyResume(md, materials);
+    if (violations.length) {
+      log("  自检发现 " + violations.length + " 处问题，自动修正一次", "err");
+      md = await llmChat("上一版简历违反规则：" + violations.join("；") + "。请只输出修正后的完整 Markdown 简历。", 3000);
+      violations = verifyResume(md, materials);
+    }
+    log(violations.length ? "  仍有 " + violations.length + " 处问题待人工核对" : "  自检通过：所有经历可溯源",
+        violations.length ? "err" : "ok");
+    showResult(md, violations);
+  } catch (e) {
+    log("生成失败：" + e.message, "err");
+    if (/设置|key|配置|服务器/.test(e.message)) toast("请到「设置」页检查接入方式");
+  } finally {
+    $("genBtn").disabled = false;
+  }
+};
+
+async function ensurePdf() {
+  if (pdfBlob) return pdfBlob;
+  if (!window._lastMd) throw new Error("请先生成简历");
+  const r = await postService("/api/resume_pdf", {
+    markdown: window._lastMd, ...candidatePayload(),
+    photo_data_url: currentSource() === "browser" ? photoDataUrl : null,
+  }, 60000);
+  pdfBlob = await r.blob();
+  if (pdfBlob.type !== "application/pdf" || pdfBlob.size < 1000) throw new Error("服务没有返回有效 PDF");
+  return pdfBlob;
+}
+$("previewPdf").onclick = async () => {
+  $("previewPdf").disabled = true;
+  try {
+    await ensurePdf();
+    if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl);
+    pdfObjectUrl = URL.createObjectURL(pdfBlob);
+    $("pdfFrame").src = pdfObjectUrl;
+    $("pdfFrame").classList.remove("hidden");
+    $("pdfFrame").scrollIntoView({ behavior:"smooth", block:"nearest" });
+  } catch (e) { alert("预览失败：" + e.message); }
+  finally { $("previewPdf").disabled = false; }
+};
+$("dlPdf").onclick = async () => {
+  $("dlPdf").disabled = true;
+  try {
+    await ensurePdf();
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    const name = currentSource() === "browser" ? currentProfile().name : "定制";
+    a.download = (name || "候选人").replace(/[\\/:*?"<>|]/g, "") + "-定制简历.pdf";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { alert("PDF 下载失败：" + e.message); }
+  finally { $("dlPdf").disabled = false; }
+};
+$("copyMd").onclick = () => {
+  navigator.clipboard.writeText(window._lastMd || "").then(() => toast("Markdown 已复制"));
+};
+
+/* ================= Markdown 渲染（极简） ================= */
+function renderMarkdown(md) {
+  const inline = s => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/\[@([A-Z]+\d+)\]/g, '<span class="cite">[@$1]</span>');
+  let html = "", inList = false;
+  for (const line of md.split("\n")) {
+    const h = line.match(/^(#{1,4})\s+(.*)/);
+    if (h) { if (inList) { html += "</ul>"; inList = false; } html += "<h" + (h[1].length + 1) + ">" + inline(h[2]) + "</h" + (h[1].length + 1) + ">"; continue; }
+    if (/^[-*]\s+/.test(line)) { if (!inList) { html += "<ul>"; inList = true; } html += "<li>" + inline(line.replace(/^[-*]\s+/, "")) + "</li>"; continue; }
+    if (inList) { html += "</ul>"; inList = false; }
+    if (/^---+$/.test(line.trim())) { html += "<hr>"; continue; }
+    if (line.trim()) html += "<p>" + inline(line) + "</p>";
+  }
+  if (inList) html += "</ul>";
+  return html;
+}
+
+/* ================= 设置 ================= */
+function loadSettings() {
+  const mode = settings.mode || "proxy";
+  document.querySelector('input[name=mode][value="' + mode + '"]').checked = true;
+  $("s-endpoint").value = settings.endpoint || "";
+  $("s-base").value = settings.baseUrl || "";
+  $("s-key").value = settings.apiKey || "";
+  $("s-model").value = settings.model || "";
+  $("byokFields").classList.toggle("hidden", mode !== "byok");
+}
+document.querySelectorAll("input[name=mode]").forEach(r => r.onchange = () => {
+  $("byokFields").classList.toggle("hidden", r.value !== "byok" || !r.checked);
+});
+$("saveSettings").onclick = () => {
+  settings = {
+    mode: document.querySelector("input[name=mode]:checked").value,
+    endpoint: $("s-endpoint").value.trim(),
+    baseUrl: $("s-base").value.trim(),
+    apiKey: $("s-key").value.trim(),
+    model: $("s-model").value.trim(),
+  };
+  localStorage.setItem(LS.settings, JSON.stringify(settings));
+  detectService();
+  toast("设置已保存");
+};
+
+/* ================= 初始化 ================= */
+(function init() {
+  const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
+  Object.entries(profile).forEach(([k, v]) => { if ($("p-" + k)) $("p-" + k).value = v; });
+  renderMaterials();
+  loadSettings();
+  detectService();
+})();
+</script>
+</body>
+</html>
