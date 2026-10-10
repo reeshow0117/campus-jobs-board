@@ -26,12 +26,24 @@ class AccessTests(unittest.TestCase):
             p = patch.object(server, name, value)
             p.start()
             self.addCleanup(p.stop)
+        env = patch.dict(os.environ, {"QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT": "100"})
+        env.start()
+        self.addCleanup(env.stop)
         self.anon = TestClient(server.app)
 
     def invited(self, label="测试用户", quota=30):
         session = self.store.redeem(self.store.invite(label), quota)
         client = TestClient(server.app, headers={"Authorization": "Bearer " + session})
         return session, client
+
+    def test_cors_only_exact_https_preview_origin(self):
+        self.assertEqual(["https://preview.example.invalid"],
+                         server.trusted_origins("https://preview.example.invalid"))
+        self.assertEqual([], server.trusted_origins(""))
+        for bad in ("*", "http://public.example.invalid", "https://preview.example.invalid/path",
+                    "https://user:password@preview.example.invalid"):
+            with self.assertRaises(ValueError):
+                server.trusted_origins(bad)
 
     def test_anonymous_denied_and_fail_closed_without_db(self):
         self.assertEqual(401, self.anon.post("/api/resume", json=PAYLOAD).status_code)
@@ -101,21 +113,90 @@ class AccessTests(unittest.TestCase):
         self.assertEqual(429, result.status_code)
         self.assertEqual(2, outbound.call_count)
         self.assertEqual(0, client.get("/api/quota").json()["model_calls_remaining"])
-        self.assertEqual(2, self.store.quota(self.store.user(session))["model_calls_used"])
+        self.assertEqual(2, self.store.quota(self.store.user(session), 100)["model_calls_used"])
+
+    def test_platform_cap_cross_user_and_retries_do_not_escape(self):
+        first_token, first = self.invited("甲")
+        second_token, second = self.invited("乙")
+        with patch.dict(os.environ, {"QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT": "2"}):
+            self.store.consume(self.store.user(first_token), "model", platform_daily_limit=2)
+            self.store.consume(self.store.user(second_token), "model", platform_daily_limit=2)
+            self.assertEqual(0, first.get("/api/quota").json()["model_calls_remaining"])
+            self.assertTrue(second.get("/api/quota").json()["platform_limit_reached"])
+            env = {"QIUZHAO_LLM_API_KEY": "dummy", "QIUZHAO_LLM_BASE_URL": "https://example.invalid/v1",
+                   "QIUZHAO_LLM_MODEL": "fake", "QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT": "2"}
+            with patch.dict(os.environ, env), patch.object(server.resume_gen, "llm_chain",
+                 side_effect=lambda *_: llm.chat("dummy", retries=2)), \
+                 patch.object(llm.urllib.request, "urlopen") as outbound:
+                result = second.post("/api/resume", json=PAYLOAD)
+            self.assertEqual(429, result.status_code)
+            self.assertIn("平台", result.json()["detail"])
+            outbound.assert_not_called()
+
+    def test_atomic_platform_limit_under_parallel_users(self):
+        first, second = (self.store.user(self.invited(label)[0]) for label in ("甲", "乙"))
+        def consume(user):
+            try:
+                self.store.consume(user, "model", platform_daily_limit=1)
+                return True
+            except access.AccessError as exc:
+                self.assertEqual(429, exc.status)
+                return False
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            self.assertEqual([False, True], sorted(pool.map(consume, (first, second))))
+        with closing(self.store.connect()) as db:
+            self.assertEqual(1, db.execute("SELECT COUNT(*) FROM usage WHERE kind = 'model'").fetchone()[0])
+
+    def test_state_store_inside_repository_and_http_model_url_rejected(self):
+        project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with self.assertRaises(ValueError):
+            access.AccessStore(os.path.join(project, "agent", "state", "access.sqlite3"))
+        env = {"QIUZHAO_LLM_API_KEY": "dummy", "QIUZHAO_LLM_BASE_URL": "http://model.example.invalid/v1",
+               "QIUZHAO_LLM_MODEL": "fake"}
+        with patch.dict(os.environ, env), patch.object(llm.urllib.request, "urlopen") as outbound:
+            with self.assertRaises(llm.LLMError):
+                llm.chat("synthetic")
+            outbound.assert_not_called()
+
+    def test_platform_limit_missing_or_invalid_fails_closed(self):
+        token, client = self.invited()
+        with self.assertRaises(ValueError):
+            self.store.consume(self.store.user(token), "model")
+        with patch.dict(os.environ, {"QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT": "0"}):
+            with patch.object(server.llm, "is_configured", return_value=True), \
+                 patch.object(server.resume_gen, "llm_chain") as chain:
+                self.assertEqual(503, client.post("/api/resume", json=PAYLOAD).status_code)
+                chain.assert_not_called()
+            self.assertEqual(503, client.get("/api/quota").status_code)
+
+    def test_platform_quota_resets_at_beijing_midnight(self):
+        # 当前时间附近跨越北京时间午夜，不依赖具体生产日期。
+        token, _ = self.invited()
+        from datetime import datetime, timedelta
+        midnight = datetime.combine(datetime.now(access.CN_TZ).date() + timedelta(days=1),
+                                    datetime.min.time(), tzinfo=access.CN_TZ)
+        cutoff = midnight.timestamp()
+        user_id = self.store.user(token)
+        with patch.object(access.time, "time", side_effect=[cutoff - 1, cutoff]):
+            self.store.consume(user_id, "model", platform_daily_limit=1)
+            self.store.consume(user_id, "model", platform_daily_limit=1)
+        with closing(self.store.connect()) as db:
+            days = db.execute("SELECT DISTINCT day FROM usage WHERE kind = 'model' ORDER BY day").fetchall()
+            self.assertEqual(2, len(days))
 
     def test_per_user_quota_override_and_zero_limit(self):
         token, client = self.invited(quota=1)
         user = self.store.user(token)
-        self.store.consume(user, "model")
+        self.store.consume(user, "model", platform_daily_limit=100)
         with self.assertRaises(access.AccessError) as caught:
-            self.store.consume(user, "model")
+            self.store.consume(user, "model", platform_daily_limit=100)
         self.assertEqual(429, caught.exception.status)
         self.store.set_quota(user, 3)
-        self.store.consume(user, "model")
+        self.store.consume(user, "model", platform_daily_limit=100)
         self.assertEqual(1, client.get("/api/quota").json()["model_calls_remaining"])
         self.store.set_quota(user, 0)
         with self.assertRaises(access.AccessError):
-            self.store.consume(user, "model")
+            self.store.consume(user, "model", platform_daily_limit=100)
 
 
 if __name__ == "__main__":

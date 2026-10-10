@@ -32,10 +32,10 @@ QIUZHAO_PRIVATE_VAULT=1 .venv/bin/python agent/server.py --host 127.0.0.1 --port
 # 邀请制模式：状态目录必须在仓库外，权限仅服务账号可读写；命令仅示例，未执行部署
 QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 .venv/bin/python -m agent.access init
 QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 .venv/bin/python -m agent.access invite --label test-user
-QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 .venv/bin/python agent/server.py --host 127.0.0.1 --port 8000
+QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT=120 .venv/bin/python agent/server.py --host 127.0.0.1 --port 8000
 ```
 
-`秋招岗位看板.html` 可离线打开；简历页需后端支持，当前**并未开放公网简历生成 API**。服务端使用 `QIUZHAO_LLM_API_KEY`、`QIUZHAO_LLM_BASE_URL`、`QIUZHAO_LLM_MODEL` 环境变量，不要写入仓库。邀请制默认拒绝匿名请求；邀请码一次性兑换、会话有效 30 天，服务端仅保存随机凭据摘要。每位受邀者的生成/PDF 请求合计限 6 次/60 秒；模型的**每次 HTTP 尝试（含失败与重试）**计入北京时间自然日额度，默认 30 次/日，可用 `QIUZHAO_MODEL_DAILY_LIMIT` 设置新用户额度，使用 `python -m agent.access --db <仓库外路径> quota <用户ID> <次数>` 调整某用户额度，使用 `revoke <用户ID>` 即时撤销会话。三步链每次生成通常消耗至少 3 次额度；额满返回 429、不再调用模型。网页会话仅存标签页 sessionStorage，且绑定已设置的 API 地址；浏览器资料和照片不会存入服务器数据库。不要将本地单人模式接入反向代理，也不要在未经确认前开放公网接口。
+`秋招岗位看板.html` 可离线打开；简历页需后端支持，当前**并未开放公网简历生成 API**。服务端使用 `QIUZHAO_LLM_API_KEY`、`QIUZHAO_LLM_BASE_URL`、`QIUZHAO_LLM_MODEL` 环境变量，不要写入仓库。邀请制默认拒绝匿名请求；邀请码一次性兑换、会话有效 30 天，服务端仅保存随机凭据摘要。每位受邀者的生成/PDF 请求合计限 6 次/60 秒；模型的**每次 HTTP 尝试（含失败与重试）**计入北京时间自然日额度，默认 30 次/日，可用 `QIUZHAO_MODEL_DAILY_LIMIT` 设置新用户额度，使用 `python -m agent.access --db <仓库外路径> quota <用户ID> <次数>` 调整某用户额度，使用 `revoke <用户ID>` 即时撤销会话。三步链每次生成通常消耗至少 3 次额度；**全站额度必须显式配置 `QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT`（如本机预发示例的 120 次/日；实际值需按预算确定），缺失/无效时拒绝启动与模型调用**。跨用户全站限额与用户限额在同一 SQLite 写事务中原子校验；额满返回 429，不再调用模型。网页会话仅存标签页 sessionStorage，且绑定已设置的 API 地址；旧版浏览器 BYOK 设置升级时会移除，模型 Key 仅在服务端。浏览器资料和照片不会存入服务器数据库，**但用户自行上传的照片会随 PDF 请求暂时进入后端内存/临时文件并在响应后清理**，不等于端到端无需传输。xiao 的私人 Obsidian 库和照片不部署到服务器；不要将本地单人模式接入反向代理，也不要在未经确认前开放公网接口。
 
 ## 快速开始（看板）
 

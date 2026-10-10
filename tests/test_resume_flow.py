@@ -47,6 +47,9 @@ class ResumeFlowTests(unittest.TestCase):
         db_patch = patch.object(server, "ACCESS_DB", path)
         db_patch.start()
         self.addCleanup(db_patch.stop)
+        env = patch.dict(os.environ, {"QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT": "100"})
+        env.start()
+        self.addCleanup(env.stop)
         self.client = TestClient(server.app, headers={"Authorization": "Bearer " + session})
         self.profile = PROFILE.copy()
         self.materials = [m.copy() for m in MATERIALS]
@@ -65,6 +68,15 @@ class ResumeFlowTests(unittest.TestCase):
                     result = self.client.post("/api/resume", json={**self.payload, "title": "产品"})
             self.assertEqual(200, result.status_code)
             self.assertEqual([], result.json()["warnings"])
+
+    def test_private_mode_rejects_proxy_headers_or_public_host(self):
+        with patch.object(server, "PRIVATE_VAULT", True), \
+             patch.object(server.vault_loader, "load_vault", side_effect=AssertionError("不应读私人库")):
+            payload = {"source": "local_vault", "title": "产品"}
+            self.assertEqual(403, self.client.post("/api/resume", json=payload,
+                            headers={"X-Forwarded-For": "198.51.100.1"}).status_code)
+            self.assertEqual(403, self.client.post("/api/resume", json=payload,
+                            headers={"Host": "preview.example.invalid"}).status_code)
 
     def test_single_page_pdf_photo_and_safe_spacing(self):
         result = self.client.post("/api/resume_pdf", json={

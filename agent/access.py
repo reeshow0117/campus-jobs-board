@@ -27,7 +27,10 @@ def digest(token):
 
 class AccessStore:
     def __init__(self, path):
-        self.path = os.path.abspath(path)
+        self.path = os.path.realpath(path)
+        project_root = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
+        if os.path.commonpath((self.path, project_root)) == project_root:
+            raise ValueError("访问状态库必须位于仓库外，避免将会话与用量数据提交到 Git")
 
     def connect(self, create=False):
         mode = "rwc" if create else "rw"
@@ -39,9 +42,6 @@ class AccessStore:
         return db
 
     def init(self):
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if os.path.commonpath((self.path, project_root)) == project_root:
-            raise ValueError("访问状态库必须位于仓库外，避免将会话与用量数据提交到 Git")
         if not os.path.isdir(os.path.dirname(self.path)):
             raise ValueError("先创建仅服务账户可访问的状态目录")
         with closing(self.connect(create=True)) as db, db:
@@ -63,6 +63,7 @@ class AccessStore:
                     kind TEXT NOT NULL, day TEXT NOT NULL, created_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS usage_lookup ON usage(user_id, kind, day, created_at);
+                CREATE INDEX IF NOT EXISTS usage_platform ON usage(kind, day);
             """)
         os.chmod(self.path, 0o600)
 
@@ -106,10 +107,13 @@ class AccessStore:
             raise AccessError(401, "登录已失效，请重新获取邀请")
         return row["id"]
 
-    def consume(self, user_id, kind, per_minute=6):
-        """每次 HTTP 请求/每次模型 HTTP 尝试都单独计数，跨进程 SQLite 原子提交。"""
+    def consume(self, user_id, kind, per_minute=6, platform_daily_limit=None):
+        """每次请求/模型 HTTP 尝试单独计数；用户和平台限额在同一写事务中校验。"""
         if kind not in ("request", "model"):
             raise ValueError("不支持的计费类型")
+        # 不允许调用方忘记全站限额后直接扣费并访问模型。
+        if kind == "model" and (type(platform_daily_limit) is not int or not 1 <= platform_daily_limit <= 1000000):
+            raise ValueError("模型调用必须设置有效的平台每日总额度")
         now = int(time.time())
         day = datetime.fromtimestamp(now, CN_TZ).date().isoformat()
         with closing(self.connect()) as db, db:
@@ -129,11 +133,17 @@ class AccessStore:
                     WHERE user_id = ? AND kind = 'model' AND day = ?""",
                     (user_id, day)).fetchone()[0]
                 if count >= user["model_daily_quota"]:
-                    raise AccessError(429, "今日模型调用额度已用完，请明天再试")
+                    raise AccessError(429, "今日个人模型调用额度已用完，请明天再试")
+                total = db.execute("""SELECT COUNT(*) FROM usage
+                    WHERE kind = 'model' AND day = ?""", (day,)).fetchone()[0]
+                if total >= platform_daily_limit:
+                    raise AccessError(429, "今日平台模型调用额度已用完，请明天再试")
             db.execute("INSERT INTO usage(user_id, kind, day, created_at) VALUES (?, ?, ?, ?)",
                        (user_id, kind, day, now))
 
-    def quota(self, user_id):
+    def quota(self, user_id, platform_daily_limit):
+        if type(platform_daily_limit) is not int or not 1 <= platform_daily_limit <= 1000000:
+            raise ValueError("模型调用必须设置有效的平台每日总额度")
         day = datetime.now(CN_TZ).date().isoformat()
         with closing(self.connect()) as db:
             row = db.execute("SELECT model_daily_quota FROM users WHERE id = ? AND revoked_at IS NULL",
@@ -142,9 +152,13 @@ class AccessStore:
                 raise AccessError(401, "登录已失效")
             used = db.execute("""SELECT COUNT(*) FROM usage
                 WHERE user_id = ? AND kind = 'model' AND day = ?""", (user_id, day)).fetchone()[0]
+            total = db.execute("SELECT COUNT(*) FROM usage WHERE kind = 'model' AND day = ?",
+                               (day,)).fetchone()[0]
         return {"day": day, "model_calls_used": used,
                 "model_calls_limit": row["model_daily_quota"],
-                "model_calls_remaining": max(0, row["model_daily_quota"] - used)}
+                "model_calls_remaining": max(0, min(row["model_daily_quota"] - used,
+                                                    platform_daily_limit - total)),
+                "platform_limit_reached": total >= platform_daily_limit}
 
     def revoke(self, user_id):
         with closing(self.connect()) as db, db:

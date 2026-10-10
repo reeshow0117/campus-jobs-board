@@ -38,6 +38,7 @@ jobs:
       - name: Run offline regression tests
         run: |
           python -m unittest discover -s tests -v
+          node --test tests/frontend_smoke.mjs
           python agent/selfcheck.py
       - name: Check for accidental private files in git
         run: |

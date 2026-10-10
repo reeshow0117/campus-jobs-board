@@ -14,6 +14,7 @@ import re
 import sys
 import tempfile
 from typing import Literal
+from urllib.parse import urlsplit
 
 if __package__:
     from . import access, llm, resume_gen, resume_pdf, vault_loader
@@ -42,9 +43,26 @@ ACCESS_DB = os.environ.get("QIUZHAO_ACCESS_DB", "")
 MAX_JD_LEN = 8000
 _cache = {}
 
+def trusted_origins(value):
+    """只接受精确 HTTPS Origin；空配置禁止跨域，拒绝通配符。"""
+    origins = []
+    for raw in value.split(","):
+        origin = raw.strip()
+        if not origin:
+            continue
+        url = urlsplit(origin)
+        local = url.hostname in ("127.0.0.1", "localhost", "::1")
+        if (not url.hostname or origin != f"{url.scheme}://{url.netloc}" or
+                url.username or url.password or
+                not (url.scheme == "https" or (url.scheme == "http" and local))):
+            raise ValueError("QIUZHAO_CORS 只能设置精确 HTTPS Origin；HTTP 只限本机")
+        origins.append(origin)
+    return origins
+
+
 app = FastAPI(title="秋招简历定制", docs_url=None, redoc_url=None)
-# 未配置白名单时不允许跨域，供同域反代使用；localhost 仅在本机调试。
-_origins = [s.strip() for s in os.environ.get("QIUZHAO_CORS", "").split(",") if s.strip()]
+# 未配置白名单时不允许跨域，供同域反代使用；本机回环可用于离线调试。
+_origins = trusted_origins(os.environ.get("QIUZHAO_CORS", ""))
 app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET", "POST"],
                    allow_headers=["Content-Type", "Authorization"])
 
@@ -92,13 +110,31 @@ class PdfReq(BaseModel):
 
 def private_allowed(request: Request):
     """私人库仅在显式开启且客户端确为本机时可访问。绝不可反代公开此端口。"""
-    return PRIVATE_VAULT and request.client is not None and request.client.host in ("127.0.0.1", "::1")
+    return (PRIVATE_VAULT and request.client is not None
+            and request.client.host in ("127.0.0.1", "::1")
+            and request.url.hostname in ("127.0.0.1", "::1", "localhost")
+            and not any(header in request.headers for header in
+                        ("forwarded", "x-forwarded-for", "x-forwarded-host", "x-real-ip")))
+
+
+def platform_model_limit():
+    """总上限必须显式设置；缺失或无效时不允许任何付费模型尝试。"""
+    try:
+        limit = int(os.environ["QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT"])
+        if 1 <= limit <= 1000000:
+            return limit
+    except (KeyError, ValueError):
+        pass
+    raise HTTPException(503, "平台模型调用总额度未配置；生成接口保持关闭")
 
 
 def access_store():
     if not ACCESS_DB or not os.path.isfile(ACCESS_DB):
         raise HTTPException(503, "邀请制尚未启用；生成接口保持关闭")
-    return access.AccessStore(ACCESS_DB)
+    try:
+        return access.AccessStore(ACCESS_DB)
+    except ValueError as exc:
+        raise HTTPException(503, "访问状态库配置无效；生成接口保持关闭") from exc
 
 
 def deny_access(exc):
@@ -181,8 +217,15 @@ def validate_photo(data_url):
 
 @app.get("/api/capabilities")
 def capabilities(request: Request):
+    ready = llm.is_configured()
+    if ready and not private_allowed(request):
+        try:
+            platform_model_limit()
+            access_store()
+        except HTTPException:
+            ready = False
     return {"private_vault": private_allowed(request), "pdf": True,
-            "invite_required": not private_allowed(request), "llm": llm.is_configured()}
+            "invite_required": not private_allowed(request), "llm": ready}
 
 
 @app.post("/api/invite/redeem")
@@ -206,7 +249,7 @@ def quota_status(request: Request):
     if store is None:
         return {"private_local_mode": True}
     try:
-        return store.quota(user_id)
+        return store.quota(user_id, platform_model_limit())
     except access.AccessError as exc:
         deny_access(exc)
     except sqlite3.Error as exc:
@@ -222,8 +265,10 @@ def gen_resume(req: ResumeReq, request: Request):
     profile, materials = candidate_input(req.source, req.profile, req.materials, request)
     if not llm.is_configured():
         raise HTTPException(503, "当前未配置简历生成服务")
+    platform_limit = platform_model_limit() if store is not None else None
+
     def charge():
-        store.consume(user_id, "model")
+        store.consume(user_id, "model", platform_daily_limit=platform_limit)
 
     token = llm.charge_attempt.set(charge if store is not None else None)
     try:
@@ -321,6 +366,12 @@ def main():
         ap.error("服务只允许绑定本机回环地址；公网必须经 HTTPS 反向代理且通过用户确认")
     if not PRIVATE_VAULT and (not ACCESS_DB or not os.path.isfile(ACCESS_DB)):
         ap.error("邀请制未初始化：先在仓库外初始化 QIUZHAO_ACCESS_DB，服务保持关闭")
+    if not PRIVATE_VAULT:
+        try:
+            platform_model_limit()
+            access_store()
+        except HTTPException:
+            ap.error("需仓库外状态库及 QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT（1-1000000）")
     resume_pdf.register_fonts()
     if PRIVATE_VAULT:
         _, mats = get_private_materials()

@@ -14,6 +14,7 @@ import random
 import time
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit
 
 
 # 服务端在当前请求中注入按用户计费回调；本机离线 CLI 不设置该回调。
@@ -25,7 +26,8 @@ class LLMError(Exception):
 
 
 def is_configured():
-    return bool(os.environ.get("QIUZHAO_LLM_API_KEY") and os.environ.get("QIUZHAO_LLM_BASE_URL"))
+    return bool(os.environ.get("QIUZHAO_LLM_API_KEY") and os.environ.get("QIUZHAO_LLM_BASE_URL")
+                and os.environ.get("QIUZHAO_LLM_MODEL"))
 
 
 def chat(prompt, timeout_s=30, retries=2, max_tokens=2000):
@@ -39,6 +41,11 @@ def chat(prompt, timeout_s=30, retries=2, max_tokens=2000):
     model = os.environ.get("QIUZHAO_LLM_MODEL", "")
     if not api_key or not base_url or not model:
         raise LLMError("LLM 未配置（缺 QIUZHAO_LLM_API_KEY / BASE_URL / MODEL）")
+    parsed = urlsplit(base_url)
+    local = parsed.hostname in ("127.0.0.1", "localhost", "::1")
+    if parsed.username or parsed.password or parsed.query or parsed.fragment or not parsed.hostname or (
+            parsed.scheme != "https" and not (parsed.scheme == "http" and local)):
+        raise LLMError("模型接口必须使用 HTTPS；仅本机模型服务允许 HTTP")
 
     body = json.dumps({
         "model": model,

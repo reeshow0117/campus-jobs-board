@@ -161,17 +161,10 @@
   <!-- ============ 设置 ============ -->
   <div id="tab-settings" class="hidden">
     <div class="card">
-      <h2>LLM 接入方式</h2>
-      <label><input type="radio" name="mode" value="proxy" checked> 服务端模式（推荐：整条链在服务器跑，支持下载 PDF）</label>
-      <label>服务器地址（同域部署时留空；跨域必须使用 HTTPS，本机调试可用 127.0.0.1）</label>
+      <h2>简历服务</h2>
+      <label>服务器地址（同域部署时留空；跨域仅支持 HTTPS，本机调试可用 127.0.0.1）</label>
       <input type="text" id="s-endpoint" placeholder="留空 = 同域 /api/resume；或填 https://你的简历服务域名">
-      <label><input type="radio" name="mode" value="byok"> 使用我自己的 OpenAI 兼容 key</label>
-      <div id="byokFields" class="hidden">
-        <label>Base URL</label><input type="text" id="s-base" placeholder="https://api.openai.com/v1">
-        <label>API Key</label><input type="password" id="s-key">
-        <label>模型名</label><input type="text" id="s-model">
-        <div class="privacy">key 只存本机浏览器，浏览器直连 LLM 接口（部分服务可能因 CORS 限制无法直连，此时请改用代理模式）。</div>
-      </div>
+      <div class="privacy">模型密钥只在服务端配置，不要将 API Key 填入网页。简历内容与本人上传的照片在生成/PDF 时会传给你设置的服务地址处理。</div>
       <div style="margin-top:12px"><button class="btn primary" id="saveSettings">保存设置</button></div>
     </div>
   </div>
@@ -184,6 +177,11 @@ const LS = { profile: "qz_profile_v1", materials: "qz_materials_v1", settings: "
 const SESSION_KEY = "qz_invite_session_v1";
 let materials = JSON.parse(localStorage.getItem(LS.materials) || "[]");
 let settings = JSON.parse(localStorage.getItem(LS.settings) || "{}");
+// 旧版 BYOK 曾保存浏览器模型 Key；升级后仅保留服务地址，清理遗留密钥。
+if (Object.keys(settings).some(key => key !== "endpoint")) {
+  settings = { endpoint: settings.endpoint || "" };
+  localStorage.setItem(LS.settings, JSON.stringify(settings));
+}
 
 const $ = (id) => document.getElementById(id);
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
@@ -314,47 +312,18 @@ $("jobSearch").oninput = () => {
   });
 };
 
-/* ================= LLM 调用 ================= */
-async function fetchJson(url, options, timeoutMs) {
-  for (let attempt = 0; attempt <= 2; attempt++) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-      const r = await fetch(url, { ...options, signal: ctrl.signal });
-      clearTimeout(timer);
-      const data = await r.json();
-      if (!r.ok) {
-        if (r.status >= 400 && r.status < 500) throw new Error(data.error || ("HTTP " + r.status));
-        throw new Error(data.error || ("HTTP " + r.status));
-      }
-      return data;
-    } catch (e) {
-      if (attempt === 2 || /HTTP 4/.test(e.message)) throw e;
-      await new Promise(r => setTimeout(r, 2 ** attempt * 1000 + Math.random() * 1000));
-    }
-  }
-}
-async function llmChat(prompt, maxTokens) {
-  const s = settings;
-  if (s.mode === "byok") {
-    if (!s.baseUrl || !s.apiKey || !s.model) throw new Error("请先在「设置」里填 Base URL / Key / 模型名");
-    const data = await fetchJson(s.baseUrl.replace(/\/$/,"") + "/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + s.apiKey },
-      body: JSON.stringify({ model: s.model, messages: [{ role: "user", content: prompt }], temperature: 0.2, max_tokens: maxTokens || 2000 }),
-    }, 65000);
-    return data.choices[0].message.content;
-  }
-  throw new Error("服务端模式请直接生成，前端不单独调 LLM");
-}
+/* ================= 仅调用受邀简历服务 ================= */
 function serverBase() {
   const value = (settings.endpoint || "").trim().replace(/\/$/, "");
   if (!value) return "";
   const url = new URL(value);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && ["127.0.0.1", "localhost", "::1"].includes(url.hostname))) {
-    throw new Error("简历资料只能发往 HTTPS 服务；本机调试可使用 127.0.0.1");
+  const local = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+  const localPage = location.protocol === "file:" || ["127.0.0.1", "localhost", "[::1]"].includes(location.hostname);
+  if (url.username || url.password || url.search || url.hash || url.pathname !== "/" ||
+      !(url.protocol === "https:" || (url.protocol === "http:" && local && localPage))) {
+    throw new Error("只允许填写 HTTPS API 根域名；HTTP 仅限本机页面连接本机服务");
   }
-  return value;
+  return url.origin;
 }
 function currentSource() {
   return $("usePrivateVault").checked && !$('privateChoice').classList.contains('hidden') ? "local_vault" : "browser";
@@ -400,8 +369,8 @@ async function refreshQuota() {
     if (r.status === 401) { sessionStorage.removeItem(SESSION_KEY); throw new Error("会话已失效"); }
     if (!r.ok) throw new Error("用量暂不可查");
     const q = await r.json();
-    $("quotaHint").textContent = "已登录；今日模型调用尝试剩余 " + q.model_calls_remaining + "/" + q.model_calls_limit + " 次（北京时间）。";
-  } catch (e) { $("quotaHint").textContent = e.message + "；如需继续使用，请重新兑换邀请码。"; }
+    $("quotaHint").textContent = "已登录；今日模型调用尝试可用 " + q.model_calls_remaining + " 次（个人上限 " + q.model_calls_limit + " 次；含平台总额度，北京时间）。";
+  } catch (e) { $("quotaHint").textContent = e.message + "；如会话失效请联系管理员重新获取邀请。"; }
 }
 $("redeemInvite").onclick = async () => {
   const code = $("inviteCode").value.trim();
@@ -437,34 +406,6 @@ async function detectService() {
     $("usePrivateVault").checked = false;
   }
 }
-async function chatJson(prompt) {
-  let text = (await llmChat(prompt, 1500)).trim();
-  if (text.startsWith("```")) {
-    const lines = text.split("\n");
-    text = lines.slice(1, lines[lines.length-1].trim() === "```" ? -1 : undefined).join("\n");
-  }
-  return JSON.parse(text);
-}
-
-/* ================= 防编造自检（与后端规则一致） ================= */
-const MATERIAL_HEAD_RE = /^###\s+([A-Z]+\d+)\s*\|\s*([^|]+?)\s*\|/gm;
-function verifyResume(md, mats) {
-  const v = [];
-  const ids = new Set(mats.map(m => m.id));
-  const cited = new Set([...md.matchAll(/\[@([A-Z]+\d+)\]/g)].map(m => m[1]));
-  if (!cited.size) v.push("生成稿没有任何 [@编号] 引用，无法溯源");
-  cited.forEach(c => { if (!ids.has(c)) v.push("引用了素材库不存在的编号 @" + c); });
-  let m;
-  while ((m = MATERIAL_HEAD_RE.exec(md))) {
-    if (!ids.has(m[1])) v.push("出现素材库外的经历标题 " + m[1]);
-    else {
-      const orig = mats.find(x => x.id === m[1]);
-      if (orig && m[2] !== orig.org && !m[2].includes(orig.org)) v.push("编号 " + m[1] + " 的组织名被篡改：'" + m[2] + "' != '" + orig.org + "'");
-    }
-  }
-  return v;
-}
-
 /* ================= 生成主流程 ================= */
 function log(msg, cls) {
   $("genLog").innerHTML += '<div class="' + (cls || "") + '">' + esc(msg) + "</div>";
@@ -482,7 +423,7 @@ function showResult(md, warnings) {
   }
   $("resultMd").innerHTML = renderMarkdown(md);
   $("resultCard").classList.remove("hidden");
-  const canPdf = settings.mode !== "byok" && !(warnings?.length);
+  const canPdf = !(warnings?.length);
   $("previewPdf").classList.toggle("hidden", !canPdf);
   $("dlPdf").classList.toggle("hidden", !canPdf);
 }
@@ -502,6 +443,7 @@ async function postService(path, payload, timeoutMs) {
       const data = await r.json().catch(() => ({}));
       const detail = data.detail;
       if (r.status === 401) sessionStorage.removeItem(SESSION_KEY);
+      if ([401, 429, 502].includes(r.status)) refreshQuota();
       throw new Error(typeof detail === "string" ? detail : detail?.message || "服务返回错误 " + r.status);
     }
     if (path === "/api/resume") refreshQuota();
@@ -525,62 +467,10 @@ $("genBtn").onclick = async () => {
   $("resultCard").classList.add("hidden");
   $("genBtn").disabled = true;
   try {
-    if (settings.mode !== "byok") {
-      await genServerSide(company, title, jd);
-      return;
-    }
-    // BYOK 模式：链路与自检在浏览器本地跑
-    const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
-    if (!materials.length) { alert("请先在「我的资料库」添加经历"); return; }
-    log("[1/4] 解析 JD…");
-    const jdJson = await chatJson(
-      "你是简历顾问。把下面的招聘信息解析成 JSON：\n" +
-      '{"role":"岗位定位一句话","must_have":["硬性要求"],"nice_to_have":["加分项"],"keywords":["关键词"]}\n' +
-      "公司：" + company + "\n岗位：" + title + "\nJD 全文：\n" + (jd || title).slice(0, 3000) + "\n只输出 JSON。");
-    log("  识别出 " + (jdJson.must_have || []).length + " 条硬性要求", "ok");
-
-    log("[2/4] 从资料库选材…");
-    const brief = materials.map(m =>
-      m.id + " | " + m.org + " | " + m.role + " | " + m.period + "\n  " + m.body.replace(/\s+/g, " ").slice(0, 200)
-    ).join("\n");
-    const sel = await chatJson(
-      "你是简历顾问。根据岗位要求和候选人素材库，挑选最相关的素材。\n岗位要求：" + JSON.stringify(jdJson) +
-      "\n素材库：\n" + brief +
-      '\n输出 JSON 数组：[{"id":"素材编号","angle":"这条经历怎么贴合岗位（一句话）"}]\n只选真正相关的，宁缺毋滥；只输出 JSON。');
-    const picked = sel.filter(s => s && materials.some(m => m.id === s.id));
-    if (!picked.length) throw new Error("LLM 认为素材库中没有匹配经历，请补充资料库");
-    log("  选中 " + picked.length + " 条素材：" + picked.map(s => s.id).join(", "), "ok");
-
-    log("[3/4] 生成定制简历…");
-    const pickedText = picked.map(s => {
-      const m = materials.find(x => x.id === s.id);
-      return "### " + m.id + " | " + m.org + " | " + m.role + " | " + m.period + "\n" + m.body + "\n（取材角度：" + (s.angle || "") + "）";
-    }).join("\n\n");
-    let md = await llmChat(
-      "你是资深简历写手。根据岗位要求和候选人选中的素材，写一份定制简历（Markdown）。\n\n" +
-      "【硬性规则，违反即废稿】\n1. 只允许改写、重组、强调素材库中已有的内容，禁止编造任何经历、公司、时间、数据\n" +
-      "2. 保留每条经历的标题行格式：### 编号 | 组织 | 角色 | 时间段（组织名一字不改）\n" +
-      "3. 每条要点末尾标注来源：[@编号]\n4. 素材中带【】或“填写”字样的是待补充占位，直接跳过\n" +
-      "5. 一页 A4 原则：每条要点一两句话，总篇幅宁短勿长\n\n" +
-      "【候选人基本信息】\n" + JSON.stringify(profile) + "\n\n" +
-      "【岗位要求】\n" + JSON.stringify(jdJson) + "\n目标公司：" + company + "；目标岗位：" + title + "\n\n" +
-      "【选中素材】\n" + pickedText + "\n\n" +
-      "【输出结构】\n# 姓名 - 求职意向（附联系方式一行）\n## 求职亮点（3 条以内，每条标注 [@编号]）\n" +
-      "## 教育经历 / ## 实习经历 / ## 项目经历 / ## 技能与证书\n只输出 Markdown 简历正文。", 3000);
-
-    log("[4/4] 防编造自检…");
-    let violations = verifyResume(md, materials);
-    if (violations.length) {
-      log("  自检发现 " + violations.length + " 处问题，自动修正一次", "err");
-      md = await llmChat("上一版简历违反规则：" + violations.join("；") + "。请只输出修正后的完整 Markdown 简历。", 3000);
-      violations = verifyResume(md, materials);
-    }
-    log(violations.length ? "  仍有 " + violations.length + " 处问题待人工核对" : "  自检通过：所有经历可溯源",
-        violations.length ? "err" : "ok");
-    showResult(md, violations);
+    await genServerSide(company, title, jd);
   } catch (e) {
     log("生成失败：" + e.message, "err");
-    if (/设置|key|配置|服务器/.test(e.message)) toast("请到「设置」页检查接入方式");
+    if (/HTTPS|服务|网络|连接/.test(e.message)) toast("请检查「设置」中的服务地址");
   } finally {
     $("genBtn").disabled = false;
   }
@@ -648,28 +538,17 @@ function renderMarkdown(md) {
 
 /* ================= 设置 ================= */
 function loadSettings() {
-  const mode = settings.mode || "proxy";
-  document.querySelector('input[name=mode][value="' + mode + '"]').checked = true;
   $("s-endpoint").value = settings.endpoint || "";
-  $("s-base").value = settings.baseUrl || "";
-  $("s-key").value = settings.apiKey || "";
-  $("s-model").value = settings.model || "";
-  $("byokFields").classList.toggle("hidden", mode !== "byok");
 }
-document.querySelectorAll("input[name=mode]").forEach(r => r.onchange = () => {
-  $("byokFields").classList.toggle("hidden", r.value !== "byok" || !r.checked);
-});
 $("saveSettings").onclick = () => {
-  settings = {
-    mode: document.querySelector("input[name=mode]:checked").value,
-    endpoint: $("s-endpoint").value.trim(),
-    baseUrl: $("s-base").value.trim(),
-    apiKey: $("s-key").value.trim(),
-    model: $("s-model").value.trim(),
-  };
+  const previous = settings;
+  settings = { endpoint: $("s-endpoint").value.trim() };
+  try { serverBase(); }
+  catch (e) { settings = previous; alert(e.message); return; }
   localStorage.setItem(LS.settings, JSON.stringify(settings));
+  sessionStorage.removeItem(SESSION_KEY); // 换服务地址必须重新登录，防止带令牌请求错误的域名。
   detectService();
-  toast("设置已保存");
+  toast("设置已保存；如需生成，请重新兑换邀请");
 };
 
 /* ================= 初始化 ================= */
