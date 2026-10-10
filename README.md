@@ -26,11 +26,16 @@ python3 -m venv .venv
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python agent/selfcheck.py
 
-# 有 LLM 环境变量时才能生成简历；仅本机个人库模式可读取私库
+# 仅本机个人库模式可读取私库；绝不将此模式接入反向代理
 QIUZHAO_PRIVATE_VAULT=1 .venv/bin/python agent/server.py --host 127.0.0.1 --port 8000
+
+# 邀请制模式：状态目录必须在仓库外，权限仅服务账号可读写；命令仅示例，未执行部署
+QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 .venv/bin/python -m agent.access init
+QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 .venv/bin/python -m agent.access invite --label test-user
+QIUZHAO_ACCESS_DB=/path/outside/repo/access.sqlite3 .venv/bin/python agent/server.py --host 127.0.0.1 --port 8000
 ```
 
-`秋招岗位看板.html` 可离线打开；简历页需后端支持，当前**并未开放公网简历生成 API**。服务端使用 `QIUZHAO_LLM_API_KEY`、`QIUZHAO_LLM_BASE_URL`、`QIUZHAO_LLM_MODEL` 环境变量，不要写入仓库。想开放给所有人之前，需先部署认证/限流/HTTPS 与资源隔离。
+`秋招岗位看板.html` 可离线打开；简历页需后端支持，当前**并未开放公网简历生成 API**。服务端使用 `QIUZHAO_LLM_API_KEY`、`QIUZHAO_LLM_BASE_URL`、`QIUZHAO_LLM_MODEL` 环境变量，不要写入仓库。邀请制默认拒绝匿名请求；邀请码一次性兑换、会话有效 30 天，服务端仅保存随机凭据摘要。每位受邀者的生成/PDF 请求合计限 6 次/60 秒；模型的**每次 HTTP 尝试（含失败与重试）**计入北京时间自然日额度，默认 30 次/日，可用 `QIUZHAO_MODEL_DAILY_LIMIT` 设置新用户额度，使用 `python -m agent.access --db <仓库外路径> quota <用户ID> <次数>` 调整某用户额度，使用 `revoke <用户ID>` 即时撤销会话。三步链每次生成通常消耗至少 3 次额度；额满返回 429、不再调用模型。网页会话仅存标签页 sessionStorage，且绑定已设置的 API 地址；浏览器资料和照片不会存入服务器数据库。不要将本地单人模式接入反向代理，也不要在未经确认前开放公网接口。
 
 ## 快速开始（看板）
 
@@ -93,4 +98,4 @@ python3 scripts/build_site.py       # 同时更新看板、简历页及轻量岗
 
 - 看板投递状态、收藏和个人资料默认只留本机；点击「生成简历」后，你选择的候选人素材和 JD 会当次发往所连接的后端/模型服务处理，尚未承诺端到端不上传
 - `data/profile.json`、私人资料库、照片、生成简历、环境变量和本地追踪状态均被 `.gitignore` 排除；静态岗位快照属于公开数据
-- 公网简历 API 未接入身份认证及用量限制，不应直接对外提供服务
+- 邀请制与用量限制已在功能分支实现，但尚未经公网 HTTPS 预发验证和上线审批；目前仍不对外提供简历 API

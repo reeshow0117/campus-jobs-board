@@ -73,6 +73,14 @@
   </div>
 
   <div id="serviceNotice" class="notice">本页可先整理资料库；生成与 PDF 预览需连接简历生成服务，未连接时不会把资料发送出去。</div>
+  <div id="inviteCard" class="card hidden">
+    <h2>邀请制访问</h2>
+    <label>一次性邀请码（仅发送至你设置的简历服务，不保存邀请码）</label>
+    <input type="password" id="inviteCode" autocomplete="off" placeholder="输入受邀邀请码">
+    <div style="margin-top:10px"><button class="btn primary" id="redeemInvite">兑换访问权限</button>
+      <button class="btn" id="signOutInvite">退出当前会话</button></div>
+    <div class="privacy" id="quotaHint">未登录；生成和 PDF 接口需要受邀身份。会话仅保存在此浏览器标签页。</div>
+  </div>
   <div class="tabs">
     <button class="on" data-tab="profile">我的资料库</button>
     <button data-tab="gen">定制简历</button>
@@ -173,6 +181,7 @@
 "use strict";
 /* ================= 状态与存储 ================= */
 const LS = { profile: "qz_profile_v1", materials: "qz_materials_v1", settings: "qz_settings_v1" };
+const SESSION_KEY = "qz_invite_session_v1";
 let materials = JSON.parse(localStorage.getItem(LS.materials) || "[]");
 let settings = JSON.parse(localStorage.getItem(LS.settings) || "{}");
 
@@ -377,16 +386,53 @@ $("photoFile").onchange = async e => {
     reader.readAsDataURL(file);
   });
 };
+function accessToken() {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+    return session?.endpoint === serverBase() ? session.token : null;
+  } catch { return null; }
+}
+async function refreshQuota() {
+  const token = accessToken();
+  if (!token) { $("quotaHint").textContent = "未登录；生成和 PDF 接口需要受邀身份。会话仅保存在此浏览器标签页。"; return; }
+  try {
+    const r = await fetch(serverBase() + "/api/quota", { headers: { Authorization: "Bearer " + token } });
+    if (r.status === 401) { sessionStorage.removeItem(SESSION_KEY); throw new Error("会话已失效"); }
+    if (!r.ok) throw new Error("用量暂不可查");
+    const q = await r.json();
+    $("quotaHint").textContent = "已登录；今日模型调用尝试剩余 " + q.model_calls_remaining + "/" + q.model_calls_limit + " 次（北京时间）。";
+  } catch (e) { $("quotaHint").textContent = e.message + "；如需继续使用，请重新兑换邀请码。"; }
+}
+$("redeemInvite").onclick = async () => {
+  const code = $("inviteCode").value.trim();
+  if (!code) { alert("请输入邀请码"); return; }
+  $("redeemInvite").disabled = true;
+  try {
+    const r = await fetch(serverBase() + "/api/invite/redeem", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ invite_code: code }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || "邀请码兑换失败");
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ endpoint: serverBase(), token: data.access_token }));
+    $("inviteCode").value = "";
+    await refreshQuota();
+  } catch (e) { alert("兑换失败：" + e.message); }
+  finally { $("redeemInvite").disabled = false; }
+};
+$("signOutInvite").onclick = () => { sessionStorage.removeItem(SESSION_KEY); refreshQuota(); };
 async function detectService() {
   const box = $("serviceNotice");
   try {
     const r = await fetch(serverBase() + "/api/capabilities", { signal: AbortSignal.timeout(5000) });
     if (!r.ok) throw new Error();
     const cap = await r.json();
-    box.textContent = cap.llm ? "简历服务已连接。完成资料库后，粘贴完整 JD，生成并预览正式 PDF。" : "简历服务已连接，但模型尚未配置；暂时无法生成简历。";
+    box.textContent = cap.llm ? "简历服务已连接。请先使用邀请码登录，再粘贴 JD 生成简历。" : "简历服务已连接，但模型尚未配置；暂时无法生成简历。";
+    $("inviteCard").classList.toggle("hidden", !cap.invite_required);
+    if (cap.invite_required) await refreshQuota();
     $("privateChoice").classList.toggle("hidden", !cap.private_vault);
   } catch {
     box.textContent = "简历服务尚未连接：目前可以整理和备份资料库；生成与 PDF 预览需先连接服务。";
+    $("inviteCard").classList.add("hidden");
     $("privateChoice").classList.add("hidden");
     $("usePrivateVault").checked = false;
   }
@@ -445,15 +491,20 @@ async function postService(path, payload, timeoutMs) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
+    const token = accessToken();
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = "Bearer " + token;
     const r = await fetch(serverBase() + path, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers,
       body: JSON.stringify(payload), signal: ctrl.signal,
     });
     if (!r.ok) {
       const data = await r.json().catch(() => ({}));
       const detail = data.detail;
+      if (r.status === 401) sessionStorage.removeItem(SESSION_KEY);
       throw new Error(typeof detail === "string" ? detail : detail?.message || "服务返回错误 " + r.status);
     }
+    if (path === "/api/resume") refreshQuota();
     return r;
   } finally { clearTimeout(timer); }
 }

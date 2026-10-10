@@ -20,11 +20,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install CJK serif font and Python dependencies
+      - name: Install TrueType CJK serif font and Python dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk fonts-noto-cjk-extra
+          sudo apt-get install -y fonts-arphic-uming
           python -m pip install -e '.[test]'
+          python -c 'from agent.resume_pdf import register_fonts; assert register_fonts()'
       - name: Build site and verify generated assets
         run: |
           python scripts/build_site.py

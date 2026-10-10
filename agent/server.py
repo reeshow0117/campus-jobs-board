@@ -7,6 +7,7 @@
 """
 import argparse
 import base64
+import sqlite3
 import binascii
 import os
 import re
@@ -15,9 +16,10 @@ import tempfile
 from typing import Literal
 
 if __package__:
-    from . import llm, resume_gen, resume_pdf, vault_loader
+    from . import access, llm, resume_gen, resume_pdf, vault_loader
 else:  # 兼容 python agent/server.py 启动方式
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import access
     import llm
     import resume_gen
     import resume_pdf
@@ -36,6 +38,7 @@ DIST_DIR = os.path.join(ROOT, "dist")
 WEB_DIR = os.path.join(ROOT, "web")
 PHOTO_PATH = os.environ.get("QIUZHAO_RESUME_PHOTO", os.path.join(BASE, "profiles", "xiao", "photo.png"))
 PRIVATE_VAULT = os.environ.get("QIUZHAO_PRIVATE_VAULT") == "1"
+ACCESS_DB = os.environ.get("QIUZHAO_ACCESS_DB", "")
 MAX_JD_LEN = 8000
 _cache = {}
 
@@ -43,7 +46,11 @@ app = FastAPI(title="秋招简历定制", docs_url=None, redoc_url=None)
 # 未配置白名单时不允许跨域，供同域反代使用；localhost 仅在本机调试。
 _origins = [s.strip() for s in os.environ.get("QIUZHAO_CORS", "").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET", "POST"],
-                   allow_headers=["Content-Type"])
+                   allow_headers=["Content-Type", "Authorization"])
+
+
+class InviteReq(BaseModel):
+    invite_code: str = Field(min_length=32, max_length=128)
 
 
 class Candidate(BaseModel):
@@ -86,6 +93,44 @@ class PdfReq(BaseModel):
 def private_allowed(request: Request):
     """私人库仅在显式开启且客户端确为本机时可访问。绝不可反代公开此端口。"""
     return PRIVATE_VAULT and request.client is not None and request.client.host in ("127.0.0.1", "::1")
+
+
+def access_store():
+    if not ACCESS_DB or not os.path.isfile(ACCESS_DB):
+        raise HTTPException(503, "邀请制尚未启用；生成接口保持关闭")
+    return access.AccessStore(ACCESS_DB)
+
+
+def deny_access(exc):
+    headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+    raise HTTPException(exc.status, str(exc), headers=headers) from exc
+
+
+def require_user(request):
+    # 本机单人模式沿用本机访问限定；公网模式必须持有已兑换的一次性邀请会话。
+    if private_allowed(request):
+        return None, None
+    store = access_store()
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        raise HTTPException(401, "请先使用邀请码登录")
+    try:
+        return store, store.user(header[7:])
+    except access.AccessError as exc:
+        deny_access(exc)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "访问控制暂不可用") from exc
+
+
+def limit_request(store, user_id):
+    if store is None:
+        return
+    try:
+        store.consume(user_id, "request")
+    except access.AccessError as exc:
+        deny_access(exc)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "访问控制暂不可用") from exc
 
 
 def get_private_materials():
@@ -137,21 +182,61 @@ def validate_photo(data_url):
 @app.get("/api/capabilities")
 def capabilities(request: Request):
     return {"private_vault": private_allowed(request), "pdf": True,
-            "llm": llm.is_configured()}
+            "invite_required": not private_allowed(request), "llm": llm.is_configured()}
+
+
+@app.post("/api/invite/redeem")
+def redeem_invite(req: InviteReq):
+    store = access_store()
+    try:
+        quota = int(os.environ.get("QIUZHAO_MODEL_DAILY_LIMIT", "30"))
+        if not 0 <= quota <= 10000:
+            raise ValueError("invalid quota")
+        session = store.redeem(req.invite_code, quota)
+        return {"access_token": session, "token_type": "bearer", "expires_in": 30 * 86400}
+    except access.AccessError as exc:
+        deny_access(exc)
+    except (ValueError, sqlite3.Error) as exc:
+        raise HTTPException(503, "访问控制暂不可用") from exc
+
+
+@app.get("/api/quota")
+def quota_status(request: Request):
+    store, user_id = require_user(request)
+    if store is None:
+        return {"private_local_mode": True}
+    try:
+        return store.quota(user_id)
+    except access.AccessError as exc:
+        deny_access(exc)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "访问控制暂不可用") from exc
 
 
 @app.post("/api/resume")
 def gen_resume(req: ResumeReq, request: Request):
+    store, user_id = require_user(request)
+    limit_request(store, user_id)
     if not req.jd.strip() and not req.title.strip():
         raise HTTPException(400, "请提供岗位名称或 JD 全文")
     profile, materials = candidate_input(req.source, req.profile, req.materials, request)
     if not llm.is_configured():
         raise HTTPException(503, "当前未配置简历生成服务")
+    def charge():
+        store.consume(user_id, "model")
+
+    token = llm.charge_attempt.set(charge if store is not None else None)
     try:
         md = resume_gen.llm_chain(profile, materials, req.company, req.title,
                                   req.jd.strip() or req.title.strip())
+    except access.AccessError as exc:
+        deny_access(exc)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "访问控制暂不可用") from exc
     except llm.LLMError as exc:
         raise HTTPException(502, "模型生成失败，请稍后重试") from exc
+    finally:
+        llm.charge_attempt.reset(token)
     warnings = resume_gen.verify_resume(md, materials)
     # 不用只有问题清单的 prompt 重新生成：失去原始素材的重试会凭空编造。
     return {"markdown": md, "warnings": warnings}
@@ -159,6 +244,8 @@ def gen_resume(req: ResumeReq, request: Request):
 
 @app.post("/api/resume_pdf")
 def gen_pdf(req: PdfReq, request: Request):
+    store, user_id = require_user(request)
+    limit_request(store, user_id)
     profile, materials = candidate_input(req.source, req.profile, req.materials, request)
     warnings = resume_gen.verify_resume(req.markdown, materials)
     if warnings:
@@ -230,8 +317,10 @@ def main():
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     args = ap.parse_args()
-    if PRIVATE_VAULT and args.host not in ("127.0.0.1", "::1"):
-        ap.error("私人资料库模式只允许绑定本机，禁止 --host 0.0.0.0")
+    if args.host not in ("127.0.0.1", "::1"):
+        ap.error("服务只允许绑定本机回环地址；公网必须经 HTTPS 反向代理且通过用户确认")
+    if not PRIVATE_VAULT and (not ACCESS_DB or not os.path.isfile(ACCESS_DB)):
+        ap.error("邀请制未初始化：先在仓库外初始化 QIUZHAO_ACCESS_DB，服务保持关闭")
     resume_pdf.register_fonts()
     if PRIVATE_VAULT:
         _, mats = get_private_materials()

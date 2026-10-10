@@ -1,6 +1,8 @@
 """平台简历主链路回归：不用真 LLM、也不读取任何私人资料。"""
 import base64
 import io
+import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -8,7 +10,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from pypdf import PdfReader
 
-from agent import resume_gen, resume_pdf, server
+from agent import access, resume_gen, resume_pdf, server
 
 PROFILE = {"name": "测试候选人", "edu": "本科", "contact": "", "expect_job": "产品经理"}
 MATERIALS = [
@@ -36,7 +38,16 @@ def fake_photo():
 
 class ResumeFlowTests(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(server.app)
+        state_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(state_dir.cleanup)
+        path = os.path.join(state_dir.name, "access.sqlite3")
+        store = access.AccessStore(path)
+        store.init()
+        session = store.redeem(store.invite("测试受邀者"), 30)
+        db_patch = patch.object(server, "ACCESS_DB", path)
+        db_patch.start()
+        self.addCleanup(db_patch.stop)
+        self.client = TestClient(server.app, headers={"Authorization": "Bearer " + session})
         self.profile = PROFILE.copy()
         self.materials = [m.copy() for m in MATERIALS]
         self.payload = {"source": "browser", "profile": self.profile, "materials": self.materials}

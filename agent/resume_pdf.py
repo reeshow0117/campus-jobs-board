@@ -8,7 +8,7 @@
   - 要点：可移植的矢量 ➢ 引导，主题词加粗（**主题词：**内容）
   - 正文宋体 10pt，单页 A4，溢出自动缩排（100% → 92% → 85% → 78%）
 
-字体：优先宋体（macOS Songti.ttc / Linux Noto Serif CJK）。可用
+字体：优先宋体（macOS Songti.ttc / Linux AR PL UMing TrueType）。可用
 QIUZHAO_RESUME_FONT / QIUZHAO_RESUME_FONT_BOLD 指定 ttf|ttc 路径。
 照片：QIUZHAO_RESUME_PHOTO 或 agent/profiles/<user>/photo.png。
 
@@ -32,11 +32,9 @@ FONT_SETS = [
     # macOS 宋体-简（最接近 SimSun）
     ("/System/Library/Fonts/Supplemental/Songti.ttc", 6,
      "/System/Library/Fonts/Supplemental/Songti.ttc", 1),
-    # Linux: fonts-noto-cjk-extra 的宋体风格衬线体
-    ("/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc", 2,
-     "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 2),
-    # 部分发行版只包含 Regular 合集，仍用衬线体；加粗由 ReportLab 合成。
-    ("/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc", 2, None, 0),
+    # Linux: fonts-arphic-uming 提供 TrueType 轮廓，可由 ReportLab 嵌入；
+    # NotoSerifCJK 的 OpenType/CFF 轮廓虽有 .ttc 后缀，TTFont 无法嵌入。
+    ("/usr/share/fonts/truetype/arphic/uming.ttc", 0, None, 0),
 ]
 
 SECTION_MAP = {
@@ -101,7 +99,7 @@ def register_fonts():
         except Exception:
             continue
     raise RuntimeError(
-        "找不到宋体/衬线中文字体。Linux 请安装 fonts-noto-cjk-extra，"
+        "找不到可嵌入的宋体/衬线中文字体。Linux 请安装 fonts-arphic-uming，"
         "或设 QIUZHAO_RESUME_FONT / QIUZHAO_RESUME_FONT_BOLD 指定衬线字体路径")
 
 

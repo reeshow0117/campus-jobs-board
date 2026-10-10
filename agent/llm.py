@@ -7,12 +7,17 @@
 
 所有调用带显式超时、有限重试（指数退避 + 抖动），失败抛 LLMError 由上层降级（C4）。
 """
+from contextvars import ContextVar
 import json
 import os
 import random
 import time
 import urllib.request
 import urllib.error
+
+
+# 服务端在当前请求中注入按用户计费回调；本机离线 CLI 不设置该回调。
+charge_attempt = ContextVar("charge_model_attempt", default=None)
 
 
 class LLMError(Exception):
@@ -54,6 +59,9 @@ def chat(prompt, timeout_s=30, retries=2, max_tokens=2000):
             method="POST",
         )
         try:
+            meter = charge_attempt.get()
+            if meter is not None:
+                meter()  # 重试也计入额度；先扣额度再触发外部计费请求。
             with urllib.request.urlopen(req, timeout=timeout_s) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             return data["choices"][0]["message"]["content"]
