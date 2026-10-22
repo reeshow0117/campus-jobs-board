@@ -76,7 +76,7 @@
   <div id="serviceNotice" class="notice">本页可先整理资料库；生成与 PDF 预览需连接简历生成服务，未连接时不会把资料发送出去。</div>
   <div id="inviteCard" class="card hidden">
     <h2>邀请制访问</h2>
-    <label>一次性邀请码（仅发送至你设置的简历服务，不保存邀请码）</label>
+    <label>一次性邀请码（仅用于本系统登录，不保存邀请码）</label>
     <input type="password" id="inviteCode" autocomplete="off" placeholder="输入受邀邀请码">
     <div style="margin-top:10px"><button class="btn primary" id="redeemInvite">兑换访问权限</button>
       <button class="btn" id="signOutInvite">退出当前会话</button></div>
@@ -85,7 +85,6 @@
   <div class="tabs">
     <button class="on" data-tab="profile">我的资料库</button>
     <button data-tab="gen">定制简历</button>
-    <button data-tab="settings">设置</button>
   </div>
 
   <!-- ============ 资料库 ============ -->
@@ -160,32 +159,18 @@
     </div>
   </div>
 
-  <!-- ============ 设置 ============ -->
-  <div id="tab-settings" class="hidden">
-    <div class="card">
-      <h2>简历服务</h2>
-      <label>服务器地址（同域部署时留空；跨域仅支持 HTTPS，本机调试可用 127.0.0.1）</label>
-      <input type="text" id="s-endpoint" placeholder="留空 = 同域 /api/resume；或填 https://你的简历服务域名">
-      <div class="privacy">模型密钥只在服务端配置，不要将 API Key 填入网页。简历内容与本人上传的照片在生成/PDF 时会传给你设置的服务地址处理。</div>
-      <div style="margin-top:12px"><button class="btn primary" id="saveSettings">保存设置</button></div>
-    </div>
-  </div>
 </div>
 
 <script src="config.js"></script>
 <script>
 "use strict";
 /* ================= 状态与存储 ================= */
-const LS = { profile: "qz_profile_v1", materials: "qz_materials_v1", settings: "qz_settings_v1" };
+const LS = { profile: "qz_profile_v1", materials: "qz_materials_v1" };
 const SESSION_KEY = "qz_invite_session_v1";
 let materials = JSON.parse(localStorage.getItem(LS.materials) || "[]");
-let settings = JSON.parse(localStorage.getItem(LS.settings) || "{}");
 const siteConfig = window.QIUZHAO_CONFIG || {};
-// 旧版 BYOK 曾保存浏览器模型 Key；升级后仅保留服务地址，清理遗留密钥。
-if (Object.keys(settings).some(key => key !== "endpoint")) {
-  settings = { endpoint: settings.endpoint || "" };
-  localStorage.setItem(LS.settings, JSON.stringify(settings));
-}
+// 后端地址仅由部署配置提供；同时移除旧版浏览器 Key 和手动地址。
+localStorage.removeItem("qz_settings_v1");
 
 const $ = (id) => document.getElementById(id);
 if (siteConfig.dashboard_url) $("dashboardLink").href = siteConfig.dashboard_url;
@@ -196,7 +181,7 @@ function toast(msg) { const el = $("genHint"); el.textContent = msg; setTimeout(
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
   b.classList.add("on");
-  ["profile","gen","settings"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
+  ["profile","gen"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
 });
 
 /* ================= 资料库编辑 ================= */
@@ -320,14 +305,14 @@ $("jobSearch").oninput = () => {
 
 /* ================= 仅调用受邀简历服务 ================= */
 function serverBase() {
-  const value = (settings.endpoint || siteConfig.api_base || "").trim().replace(/\/$/, "");
+  const value = (siteConfig.api_base || "").trim().replace(/\/$/, "");
   if (!value) return "";
   const url = new URL(value);
   const local = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
   const localPage = location.protocol === "file:" || ["127.0.0.1", "localhost", "[::1]"].includes(location.hostname);
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/" ||
       !(url.protocol === "https:" || (url.protocol === "http:" && local && localPage))) {
-    throw new Error("只允许填写 HTTPS API 根域名；HTTP 仅限本机页面连接本机服务");
+    throw new Error("简历服务配置异常，请联系管理员");
   }
   return url.origin;
 }
@@ -418,7 +403,7 @@ async function detectService() {
     if (cap.invite_required) await refreshQuota();
     $("privateChoice").classList.toggle("hidden", !cap.private_vault);
   } catch {
-    box.textContent = "简历服务尚未连接：目前可以整理和备份资料库；生成与 PDF 预览需先连接服务。";
+    box.textContent = "简历服务暂不可用：目前可以整理和备份资料库，请稍后重试。";
     $("inviteCard").classList.add("hidden");
     $("privateChoice").classList.add("hidden");
     $("usePrivateVault").checked = false;
@@ -492,7 +477,7 @@ $("genBtn").onclick = async () => {
     await genServerSide(company, title, jd);
   } catch (e) {
     log("生成失败：" + e.message, "err");
-    if (/HTTPS|服务|网络|连接/.test(e.message)) toast("请检查「设置」中的服务地址");
+    if (/服务|网络|连接/.test(e.message)) toast("请稍后重试；持续失败可联系管理员");
   } finally {
     $("genBtn").disabled = false;
   }
@@ -568,36 +553,11 @@ function renderMarkdown(md) {
   return html;
 }
 
-/* ================= 设置 ================= */
-function loadSettings() {
-  $("s-endpoint").value = settings.endpoint || "";
-}
-$("saveSettings").onclick = () => {
-  const previous = settings;
-  let previousBase;
-  try { previousBase = serverBase(); } catch { previousBase = null; }
-  settings = { endpoint: $("s-endpoint").value.trim() };
-  try { serverBase(); }
-  catch (e) { settings = previous; alert(e.message); return; }
-  localStorage.setItem(LS.settings, JSON.stringify(settings));
-  const changed = previousBase !== serverBase();
-  if (changed) {
-    sessionStorage.removeItem(SESSION_KEY);
-    invalidatePdf();
-    window._lastMd = null;
-    resultCandidate = null;
-    $("resultCard").classList.add("hidden");
-  }
-  detectService();
-  toast(changed ? "服务地址已更换，请重新登录" : "设置已保存，当前会话保留");
-};
-
 /* ================= 初始化 ================= */
 (function init() {
   const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
   Object.entries(profile).forEach(([k, v]) => { if ($("p-" + k)) $("p-" + k).value = v; });
   renderMaterials();
-  loadSettings();
   detectService();
 })();
 </script>

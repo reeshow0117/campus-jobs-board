@@ -11,7 +11,7 @@ const html = readFileSync(path.join(root, 'web', 'resume.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 assert.ok(script, '简历页应包含可测试的脚本');
 
-function setup() {
+function setup(config = {api_base: 'https://preview-api.example.invalid'}) {
   const local = new Map([['qz_settings_v1', JSON.stringify({
     mode: 'byok', endpoint: 'https://preview-api.example.invalid',
     apiKey: 'fake-legacy-key', baseUrl: 'https://old.invalid', model: 'test',
@@ -48,7 +48,7 @@ function setup() {
     localStorage: storage(local), sessionStorage: storage(session),
     location: { protocol: 'https:', hostname: 'campus-jobs-board.pages.dev' },
     URL, Response, AbortController, AbortSignal, setTimeout: () => 0, clearTimeout: () => {},
-    window: {}, alert: () => {},
+    window: { QIUZHAO_CONFIG: config }, alert: () => {},
     fetch: async (url, options = {}) => {
       calls.push({ url, options });
       if (url.endsWith('/api/capabilities')) return json({ llm: true, invite_required: true, private_vault: false });
@@ -67,15 +67,14 @@ function setup() {
   return { sandbox, local, session, lookup, calls, setResponse: (next) => { response = next; } };
 }
 
-test('升级自动删除旧浏览器模型 Key，并拒绝非 HTTPS/带凭据的 API 地址', () => {
+test('部署配置取代浏览器手动地址，自动删除旧 Key，页面没有服务地址设置', () => {
   const { sandbox, local } = setup();
-  assert.deepEqual(JSON.parse(local.get('qz_settings_v1')),
-                   { endpoint: 'https://preview-api.example.invalid' });
-  assert.doesNotMatch(html, /id="s-key"|\.apiKey|\/chat\/completions/);
+  assert.equal(local.has('qz_settings_v1'), false);
+  assert.doesNotMatch(html, /id="s-key"|\.apiKey|\/chat\/completions|id="s-endpoint"|data-tab="settings"|saveSettings/);
   assert.equal(vm.runInContext('serverBase()', sandbox), 'https://preview-api.example.invalid');
   for (const endpoint of ['http://public.example.invalid', 'https://user:pass@api.example.invalid',
                           'https://api.example.invalid/path', 'http://127.0.0.1:8000']) {
-    assert.throws(() => vm.runInContext(`settings.endpoint = ${JSON.stringify(endpoint)}; serverBase()`, sandbox));
+    assert.throws(() => vm.runInContext(`siteConfig.api_base = ${JSON.stringify(endpoint)}; serverBase()`, sandbox));
   }
 });
 
@@ -100,16 +99,15 @@ test('跨域邀请码登录后携带令牌，请求额满/失败时显示服务�
   assert.equal(session.has('qz_invite_session_v1'), false);
 });
 
-test('保存相同服务地址保留一次性邀请会话，更换地址才清理', async () => {
-  const { session, lookup } = setup();
+test('同域自动连接且会话仍绑定部署地址，更换后端不会携带旧令牌', async () => {
+  const { sandbox, session, lookup } = setup({});
+  assert.equal(vm.runInContext('serverBase()', sandbox), '');
   lookup('inviteCode').value = 'synthetic-invite';
   await lookup('redeemInvite').onclick();
-  lookup('s-endpoint').value = 'https://preview-api.example.invalid';
-  lookup('saveSettings').onclick();
   assert.equal(session.has('qz_invite_session_v1'), true);
-  lookup('s-endpoint').value = 'https://other.example.invalid';
-  lookup('saveSettings').onclick();
-  assert.equal(session.has('qz_invite_session_v1'), false);
+  assert.equal(vm.runInContext('accessToken()', sandbox), 'synthetic-session');
+  vm.runInContext('siteConfig.api_base = "https://other.example.invalid"', sandbox);
+  assert.equal(vm.runInContext('accessToken()', sandbox), null);
 });
 
 test('异常 API 响应不以对象字符串展示，照片更新清空 PDF 缓存', async () => {
