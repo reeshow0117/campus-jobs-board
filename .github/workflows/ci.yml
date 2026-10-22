@@ -29,7 +29,8 @@ jobs:
       - name: Build site and verify generated assets
         run: |
           python scripts/build_site.py
-          git diff --exit-code -- 秋招岗位看板.html dist/index.html dist/resume.html dist/jobs_slim.json
+          git diff --exit-code -- 秋招岗位看板.html dist/index.html dist/resume.html dist/resume.css dist/jobs_slim.json dist/config.js
+          python scripts/build_site.py --resume-only
       - name: Check Python and front-end syntax
         run: |
           python -m compileall -q agent data scripts tests

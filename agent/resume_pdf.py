@@ -29,6 +29,7 @@ from reportlab.platypus import (
 
 # (regular_path, regular_idx, bold_path, bold_idx)
 FONT_SETS = [
+    (os.path.join(os.environ.get("WINDIR", "C:/Windows"), "Fonts", "simsun.ttc"), 0, None, 0),
     # macOS 宋体-简（最接近 SimSun）
     ("/System/Library/Fonts/Supplemental/Songti.ttc", 6,
      "/System/Library/Fonts/Supplemental/Songti.ttc", 1),

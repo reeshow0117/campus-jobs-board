@@ -189,7 +189,7 @@ JD 全文：
 ## 社会实践（仅国企/银行/管培方向，1-2 条）
 ## 技能与证书
 只输出 Markdown 简历正文。""",
-        timeout_s=60, retries=2,
+        timeout_s=60, retries=2, max_tokens=4000,
     )
     return md
 

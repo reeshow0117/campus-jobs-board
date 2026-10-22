@@ -1,7 +1,7 @@
 """LLM 客户端封装（OpenAI 兼容接口，仅用标准库）
 
 凭据与地址全部从环境变量读取（C6）：
-  QIUZHAO_LLM_API_KEY   API 密钥（不配则纯规则模式，整个系统照常可用）
+  QIUZHAO_LLM_API_KEY   API 密钥（未配置时网页生成接口返回 503）
   QIUZHAO_LLM_BASE_URL  接口地址，如 https://api.openai.com/v1
   QIUZHAO_LLM_MODEL     模型名
 
@@ -19,10 +19,36 @@ from urllib.parse import urlsplit
 
 # 服务端在当前请求中注入按用户计费回调；本机离线 CLI 不设置该回调。
 charge_attempt = ContextVar("charge_model_attempt", default=None)
+deadline = ContextVar("model_deadline", default=None)
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """模型凭据不能随上游重定向发送到其他主机。"""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def open_model(req, timeout):
+    return urllib.request.build_opener(NoRedirect).open(req, timeout=timeout)
+
+
+def remaining_timeout(timeout_s):
+    end = deadline.get()
+    if end is None:
+        return timeout_s
+    remaining = end - time.monotonic()
+    if remaining <= 0:
+        raise LLMError("生成已超时，请稍后重试或精简 JD 和素材")
+    return min(timeout_s, remaining)
 
 
 class LLMError(Exception):
     """LLM 调用失败（含超时、网络错误、非 200、响应格式非法）。"""
+
+    def __init__(self, message, public_message=None):
+        super().__init__(message)
+        self.public_message = public_message or "模型生成失败，请稍后重试"
 
 
 def is_configured():
@@ -47,12 +73,16 @@ def chat(prompt, timeout_s=30, retries=2, max_tokens=2000):
             parsed.scheme != "https" and not (parsed.scheme == "http" and local)):
         raise LLMError("模型接口必须使用 HTTPS；仅本机模型服务允许 HTTP")
 
-    body = json.dumps({
+    payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2,
         "max_tokens": max_tokens,
-    }).encode("utf-8")
+    }
+    # 当前 DeepSeek 默认开启思考；简历三步链使用非思考模式，避免预算耗在推理正文上。
+    if parsed.hostname == "api.deepseek.com":
+        payload["thinking"] = {"type": "disabled"}
+    body = json.dumps(payload).encode("utf-8")
 
     last_err = None
     for attempt in range(retries + 1):
@@ -66,21 +96,39 @@ def chat(prompt, timeout_s=30, retries=2, max_tokens=2000):
             method="POST",
         )
         try:
+            timeout = remaining_timeout(timeout_s)
             meter = charge_attempt.get()
             if meter is not None:
                 meter()  # 重试也计入额度；先扣额度再触发外部计费请求。
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            with open_model(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-            return data["choices"][0]["message"]["content"]
+            remaining_timeout(timeout_s)
+            choice = data["choices"][0]
+            if choice.get("finish_reason") == "length":
+                raise LLMError("模型输出被截断", "模型输出超出长度限制，请精简素材后重试")
+            content = choice["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise LLMError("模型返回空内容，请检查模型配置")
+            return content
         except urllib.error.HTTPError as e:
-            last_err = LLMError(f"HTTP {e.code}: {e.read()[:200]!r}")
+            messages = {
+                401: "模型密钥无效，请联系管理员检查配置",
+                403: "模型服务拒绝访问，请联系管理员检查权限",
+                402: "模型账户余额不足，请联系管理员充值",
+                429: "模型服务繁忙或达到调用限制，请稍后再试",
+            }
+            last_err = LLMError(f"模型接口返回 HTTP {e.code}", messages.get(e.code))
+            e.close()
             if 400 <= e.code < 500:
                 raise last_err  # 客户端错误重试无意义
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError,
-                KeyError, IndexError) as e:
-            last_err = LLMError(f"{type(e).__name__}: {e}")
+                KeyError, IndexError, TypeError, AttributeError, UnicodeError, OSError) as e:
+            last_err = LLMError(f"模型响应失败（{type(e).__name__}）")
         if attempt < retries:
-            time.sleep(2 ** attempt + random.random())  # 指数退避 + 抖动
+            delay = 2 ** attempt + random.random()
+            if remaining_timeout(delay + 0.1) < delay + 0.1:
+                raise LLMError("生成已超时，请稍后重试或精简 JD 和素材")
+            time.sleep(delay)
     raise last_err
 
 
