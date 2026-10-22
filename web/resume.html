@@ -3,62 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#2459d3">
+<meta name="theme-color" content="#f7f7f6">
 <meta name="description" content="整理真实经历，按目标岗位定制简历，预览并下载单页 A4 PDF。">
 <title>校招简历定制系统</title>
-<link rel="stylesheet" href="resume.css">
+<link rel="stylesheet" href="resume.css?v=94e44506a3ff">
 </head>
 <body>
 <div class="wrap">
   <header class="topbar">
-    <div class="brand"><div class="brand-mark" aria-hidden="true">R</div><div><h1>简历工作台</h1><div class="brand-sub">YOUR NEXT OPPORTUNITY</div></div></div>
-    <a class="back" id="dashboardLink" href="https://campus-jobs-board.pages.dev/">探索岗位看板 ↗</a>
+    <h1>简历工作台</h1>
+    <a class="back" id="dashboardLink" href="https://campus-jobs-board.pages.dev/">岗位看板</a>
   </header>
-  <section class="hero">
-    <div><div class="eyebrow">CAREER STUDIO · 校招简历定制</div><h2>让真实的经历，被更好地看见。</h2><p>整理你的经历素材，为每一个目标岗位，准备一份更合适的简历。</p></div>
-    <div class="flow" aria-label="使用步骤"><div class="flow-item"><b>01</b>整理资料</div><span class="flow-line"></span><div class="flow-item"><b>02</b>选择岗位</div><span class="flow-line"></span><div class="flow-item"><b>03</b>导出简历</div></div>
-  </section>
-  <div id="serviceNotice" class="notice" role="status">正在检查简历服务。你可以先整理、导入和备份资料。</div>
+  <div id="serviceNotice" class="notice service-status" role="status">正在检查服务…</div>
   <section id="inviteCard" class="card invite-card hidden">
-    <div><h2>开启你的简历定制</h2><p class="privacy">使用邀请码登录，资料整理无需登录。</p><div class="quota-line" id="quotaHint">会话仅保存在当前浏览器标签页。</div></div>
+    <div><h2 id="accessTitle">邀请码登录</h2><div class="quota-line" id="quotaHint">生成和导出需登录，整理资料无需登录。</div></div>
     <div class="invite-controls"><label class="hidden" for="inviteCode">一次性邀请码</label><input type="password" id="inviteCode" autocomplete="off" aria-label="一次性邀请码" placeholder="输入你的一次性邀请码"><button class="btn primary" id="redeemInvite">登录</button><button class="btn" id="signOutInvite">退出</button></div>
   </section>
-  <nav class="tabs" aria-label="工作区"><button class="on" data-tab="profile"><span>01</span>我的资料库</button><button data-tab="gen"><span>02</span>定制简历</button></nav>
+  <nav class="tabs" aria-label="工作区"><button class="on" data-tab="profile">我的资料库</button><button data-tab="gen">定制简历</button></nav>
   <main>
   <div id="tab-profile">
-    <div class="section-top"><div><h2>每一段经历，都是你的积累。</h2><p>先导入已有资料，或从一条经历开始。</p></div><div class="toolbar"><span class="save-state" id="saveState">资料仅保存在本机浏览器</span><button class="btn" id="importProfile">↓ 导入资料</button><button class="btn" id="exportProfile">导出备份</button><button class="btn primary" id="saveProfile">保存资料库</button><input type="file" id="importFile" accept=".json" class="hidden"></div></div>
+    <div class="section-top"><div><h2>资料管理</h2><p>导入已有备份，或直接填写资料。</p></div><div class="toolbar"><span class="save-state" id="saveState">资料仅保存在本机浏览器</span><button class="btn" id="importProfile">导入资料</button><button class="btn" id="exportProfile">导出备份</button><button class="btn primary" id="saveProfile">保存资料库</button><input type="file" id="importFile" accept=".json" class="hidden"></div></div>
     <div class="workspace-grid"><div class="main-column">
-      <section class="card"><div class="card-title"><h2><span class="section-num">01</span>基本信息</h2><span class="badge">简历抬头</span></div>
+      <section class="card"><div class="card-title"><h2>基本信息</h2></div>
         <div class="row"><div><label for="p-name">姓名</label><input type="text" id="p-name" placeholder="你的姓名"></div><div><label for="p-contact">手机 / 邮箱</label><input type="text" id="p-contact" placeholder="用于简历中的联系方式"></div>
         <div><label for="p-edu">最高学历</label><input type="text" id="p-edu" placeholder="例如：硕士"></div><div><label for="p-year">毕业时间</label><input type="text" id="p-year" placeholder="例如：2027 届"></div>
         <div><label for="p-expect_job">求职意向</label><input type="text" id="p-expect_job" placeholder="例如：产品经理"></div><div><label for="p-expect_city">期望城市</label><input type="text" id="p-expect_city" placeholder="例如：深圳 / 上海"></div></div>
       </section>
-      <section class="card"><div class="card-title"><h2><span class="section-num">02</span>经历素材</h2><span class="badge" id="materialBadge">0 条素材</span></div><p class="card-description">完整记录你做过的事。生成简历时，会按岗位从这些经历中取材。</p>
-        <div class="material-toolbar"><label class="hidden" for="materialKind">新增经历类型</label><select id="materialKind" aria-label="新增经历类型"><option value="S">实习经历</option><option value="E">教育背景</option><option value="P">项目经历</option><option value="J">技能与证书</option><option value="A">奖项荣誉</option><option value="V">社会实践</option></select><button class="btn" id="addMaterial">＋ 添加经历</button><button class="btn link" id="loadExample">查看示例模板</button></div>
+      <section class="card"><div class="card-title"><h2>经历素材</h2><span class="badge" id="materialBadge">0 条素材</span></div><p class="card-description">记录经历的职责、行动和成果，供生成简历时取材。</p>
+        <div class="material-toolbar"><label class="hidden" for="materialKind">新增经历类型</label><select id="materialKind" aria-label="新增经历类型"><option value="S">实习经历</option><option value="E">教育背景</option><option value="P">项目经历</option><option value="J">技能与证书</option><option value="A">奖项荣誉</option><option value="V">社会实践</option></select><button class="btn" id="addMaterial">添加经历</button><button class="btn link" id="loadExample">查看示例模板</button></div>
         <div class="material-filters" aria-label="筛选经历类型"><button class="on" data-kind="">全部</button><button data-kind="E">教育</button><button data-kind="S">实习</button><button data-kind="P">项目</button><button data-kind="J">技能证书</button><button data-kind="A">奖项</button><button data-kind="V">实践</button></div>
         <div id="materials"></div><div class="materials-foot">建议写清楚：背景与目标 → 你的行动 → 可核实的成果。量化数据请以真实记录为准。</div>
       </section>
     </div><aside class="sidebar">
-      <section class="card summary-card"><div class="eyebrow">MY PROFILE</div><div class="summary-name" id="summaryName">你的经历，值得被看见</div><div class="summary-sub" id="summaryIntent">添加基本信息，开始整理你的求职资料。</div><div class="stat-grid"><div><strong id="materialCount">0</strong><span>经历素材</span></div><div><strong id="categoryCount">0</strong><span>覆盖类型</span></div></div></section>
-      <section class="card"><div class="card-title"><h2>简历照片</h2><span class="badge">PDF 使用</span></div><div class="photo-area"><div class="photo-slot"><span id="photoPlaceholder">证件照</span><img id="photoPreview" class="hidden" alt="本次上传的证件照"></div><div class="photo-copy"><label for="photoFile">上传 JPG / PNG</label><input type="file" id="photoFile" accept="image/jpeg,image/png"><div class="privacy">最大 2 MB，刷新后需重新选择。</div></div></div></section>
-      <section class="card"><h3>从资料到简历，只需三步</h3><div class="guide-list"><div class="guide-item"><b>1</b><div><strong>建立经历资料库</strong>导入 JSON 备份，或添加教育、实习和项目。</div></div><div class="guide-item"><b>2</b><div><strong>贴入目标岗位 JD</strong>完整的岗位描述，有助于更准确地选材。</div></div><div class="guide-item"><b>3</b><div><strong>核对并导出</strong>检查事实和来源，预览单页 PDF 后下载。</div></div></div><button class="btn link" id="goGenerate">资料准备好了，去定制 →</button></section>
-      <div class="side-note">资料默认保存在当前浏览器。换电脑或更换访问地址前，请先导出备份。只有点击生成时，素材和岗位信息才会发送给简历服务处理；照片仅用于 PDF。</div>
+      <section class="card summary-card"><h2>资料概览</h2><div class="summary-name" id="summaryName">尚未填写姓名</div><div class="summary-sub" id="summaryIntent">尚未填写求职意向</div><div class="stat-grid"><div><strong id="materialCount">0</strong><span>经历素材</span></div><div><strong id="categoryCount">0</strong><span>经历类型</span></div></div></section>
+      <section class="card"><div class="card-title"><h2>简历照片</h2></div><div class="photo-area"><div class="photo-slot"><span id="photoPlaceholder">证件照</span><img id="photoPreview" class="hidden" alt="本次上传的证件照"></div><div class="photo-copy"><label for="photoFile">上传 JPG / PNG</label><input type="file" id="photoFile" accept="image/jpeg,image/png"><div class="privacy">最大 2 MB，刷新后需重新选择。</div></div></div></section>
+      <section class="card"><h3>填写完成后</h3><p class="privacy">选择目标岗位，生成并核对简历。</p><button class="btn" id="goGenerate">前往定制简历</button></section>
+      <div class="side-note">资料保存在当前浏览器，请定期导出备份。生成时会提交资料和岗位描述；照片仅用于 PDF 排版。</div>
     </aside></div>
   </div>
   <div id="tab-gen" class="hidden">
-    <div class="section-top"><div><h2>一份简历，对应一个机会。</h2><p>写下你的目标岗位，让已有经历更有重点。</p></div><span class="save-state" id="generationMaterialHint">从你的资料库中取材</span></div>
+    <div class="section-top"><div><h2>定制简历</h2><p>填写目标岗位和岗位描述，生成后核对并导出。</p></div><span class="save-state" id="generationMaterialHint">从你的资料库中取材</span></div>
     <div class="workspace-grid"><div class="main-column">
-      <section class="card"><div class="card-title"><h2><span class="section-num">01</span>目标岗位</h2><span class="badge">输入或从岗位库选择</span></div><div class="row"><div><label for="g-company">目标公司</label><input type="text" id="g-company" placeholder="例如：腾讯"></div><div><label for="g-title">岗位名称</label><input type="text" id="g-title" placeholder="例如：产品经理实习生"></div></div><div class="field-space"><label for="jobSearch">从岗位库快速查找</label><input type="text" id="jobSearch" placeholder="搜索公司或岗位关键词…"><div class="job-pick hidden" id="jobList"></div></div></section>
-      <section class="card"><div class="card-title"><h2><span class="section-num">02</span>岗位描述</h2><span class="badge">JD</span></div><p class="card-description">粘贴职责和任职要求。描述越完整，选材和表达越贴合。</p><label class="hidden" for="g-jd">JD 全文</label><textarea id="g-jd" rows="10" placeholder="岗位职责：&#10;1. …&#10;&#10;任职要求：&#10;1. …"></textarea><div class="privacy">暂时没有完整 JD，也可以先填写岗位名称。</div></section>
+      <section class="card"><div class="card-title"><h2>目标岗位</h2></div><div class="row"><div><label for="g-company">目标公司</label><input type="text" id="g-company" placeholder="例如：腾讯"></div><div><label for="g-title">岗位名称</label><input type="text" id="g-title" placeholder="例如：产品经理实习生"></div></div><div class="field-space"><label for="jobSearch">从岗位库快速查找</label><input type="text" id="jobSearch" placeholder="搜索公司或岗位关键词…"><div class="job-pick hidden" id="jobList"></div></div></section>
+      <section class="card"><div class="card-title"><h2>岗位描述</h2></div><p class="card-description">粘贴岗位职责和任职要求。</p><label class="hidden" for="g-jd">完整岗位描述</label><textarea id="g-jd" rows="10" placeholder="岗位职责：&#10;1. …&#10;&#10;任职要求：&#10;1. …"></textarea><div class="privacy">没有完整描述时，可先填写岗位名称。</div></section>
     </div><aside class="sidebar">
-      <section class="card generate-card"><div class="eyebrow">READY FOR YOUR NEXT STEP</div><div class="generate-title">写出更贴合岗位的你。</div><p>分析岗位要求，选择相关经历，再组织为一份有来源依据的简历。</p><div id="privateChoice" class="notice hidden"><label><input type="checkbox" id="usePrivateVault"> 使用本机私人 Obsidian 资料库</label></div><button class="btn primary full large" id="genBtn">生成定制简历 →</button><div class="quota-explain">使用平台模型额度。通常每次生成包含 3 次模型请求，失败重试也计入额度。</div><span class="muted" id="genHint" role="status"></span><div class="log" id="genLog" aria-live="polite"></div></section>
-      <section class="card"><h3>生成后，请再确认</h3><p class="privacy">经历、时间与量化结果是否准确；重点是否回应岗位要求。来源标记可帮助你回查原始素材。</p><p class="privacy">上传证件照后，即可预览并下载单页 A4 PDF。</p></section>
+      <section class="card generate-card"><h2>生成简历</h2><p>按岗位要求选择相关经历，生成后请核对内容。</p><div id="privateChoice" class="notice hidden"><label><input type="checkbox" id="usePrivateVault"> 使用本机私人 Obsidian 资料库</label></div><button class="btn primary full large" id="genBtn">生成简历</button><div class="quota-explain">每次生成通常使用 3 次模型调用，失败重试也计入额度。</div><span class="muted" id="genHint" role="status"></span><div class="log" id="genLog" aria-live="polite"></div></section>
+      <section class="card"><h3>导出前检查</h3><p class="privacy">经历、时间与量化结果是否准确；重点是否回应岗位要求。来源标记可帮助你回查原始素材。</p><p class="privacy">上传证件照后，即可预览并下载单页 A4 PDF。</p></section>
     </aside></div>
     <div class="warn-box hidden" id="warnBox" role="alert"></div>
-    <section class="card hidden" id="resultCard"><div class="result-title"><h2>你的定制简历</h2><div class="result-actions"><button class="btn" id="copyMd">复制正文与来源</button><button class="btn hidden" id="previewPdf">预览 PDF</button><button class="btn primary hidden" id="dlPdf">下载单页 PDF ↓</button></div></div><div class="result-note">以下为带来源标记的核对稿，正式 PDF 会移除标记。请核对后再投递。</div><div class="result-md" id="resultMd"></div><iframe id="pdfFrame" class="pdf-frame hidden" title="正式 PDF 预览"></iframe></section>
+    <section class="card hidden" id="resultCard"><div class="result-title"><h2>生成结果</h2><div class="result-actions"><button class="btn" id="copyMd">复制正文与来源</button><button class="btn hidden" id="previewPdf">预览 PDF</button><button class="btn primary hidden" id="dlPdf">下载 PDF</button></div></div><div class="result-note">核对稿包含来源编号，PDF 会自动移除。投递前请检查内容。</div><div class="result-md" id="resultMd"></div><iframe id="pdfFrame" class="pdf-frame hidden" title="正式 PDF 预览"></iframe></section>
   </div>
   </main>
-  <footer class="footer"><span>为每一次认真准备的机会。</span><span>真实素材 · 岗位定制 · 单页 A4</span></footer>
+
 </div>
 <script src="config.js"></script>
 <script>
@@ -91,8 +87,8 @@ function syncSummary() {
   $("materialCount").textContent = materials.length;
   $("materialBadge").textContent = materials.length + " 条素材";
   $("categoryCount").textContent = new Set(materials.map(m => m.id[0])).size;
-  $("summaryName").textContent = $("p-name").value.trim() || "你的经历，值得被看见";
-  $("summaryIntent").textContent = $("p-expect_job").value.trim() || "添加基本信息，开始整理你的求职资料。";
+  $("summaryName").textContent = $("p-name").value.trim() || "尚未填写姓名";
+  $("summaryIntent").textContent = $("p-expect_job").value.trim() || "尚未填写求职意向";
   $("generationMaterialHint").textContent = "将从你的 " + materials.length + " 条素材中选材";
 }
 function markDirty() {
@@ -115,7 +111,7 @@ function renderMaterials() {
   const box = $("materials");
   box.innerHTML = "";
   if (!materials.length) {
-    box.innerHTML = '<div class="empty-state"><div class="empty-symbol" aria-hidden="true"></div><strong>把你的第一段经历放进来</strong><p>导入已有资料备份，或点击上方「添加经历」。</p></div>';
+    box.innerHTML = '<div class="empty-state"><strong>暂无经历</strong><p>导入已有资料备份，或点击上方「添加经历」。</p></div>';
     return;
   }
   let shown = 0;
@@ -138,7 +134,7 @@ function renderMaterials() {
       '<textarea rows="4" data-f="body" data-i="' + i + '">' + esc(m.body) + '</textarea></div>';
     box.appendChild(div);
   });
-  if (!shown) box.innerHTML = '<div class="empty-state"><strong>还没有这类经历</strong><p>选择上方类型，添加一条真实的经历。</p></div>';
+  if (!shown) box.innerHTML = '<div class="empty-state"><strong>还没有这类经历</strong><p>选择经历类型后添加。</p></div>';
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (confirm("删除这条经历？")) { materials.splice(Number(b.dataset.del), 1); markDirty(); renderMaterials(); }
   });
@@ -307,14 +303,21 @@ function accessToken() {
 }
 async function refreshQuota() {
   const token = accessToken();
-  if (!token) { $("quotaHint").textContent = "未登录；生成和 PDF 接口需要受邀身份。会话仅保存在此浏览器标签页。"; return; }
+  $("accessTitle").textContent = token ? "使用额度" : "邀请码登录";
+  $("signOutInvite").classList.toggle("hidden", !token);
+  $("inviteCode").classList.toggle("hidden", !!token);
+  $("redeemInvite").classList.toggle("hidden", !!token);
+  if (!token) { $("quotaHint").textContent = "生成和导出需登录，整理资料无需登录。"; return; }
   try {
     const r = await fetch(serverBase() + "/api/quota", { headers: { Authorization: "Bearer " + token }, signal: AbortSignal.timeout(5000) });
     if (r.status === 401) { sessionStorage.removeItem(SESSION_KEY); throw new Error("会话已失效"); }
     if (!r.ok) throw new Error("用量暂不可查");
     const q = await r.json();
-    $("quotaHint").textContent = "已登录；今日模型调用尝试可用 " + q.model_calls_remaining + " 次（个人上限 " + q.model_calls_limit + " 次；含平台总额度，北京时间）。";
-  } catch (e) { $("quotaHint").textContent = e.message + "；如会话失效请联系管理员重新获取邀请。"; }
+    $("quotaHint").textContent = "今日可用 " + q.model_calls_remaining + " 次模型调用，个人每日上限 " + q.model_calls_limit + " 次。";
+  } catch (e) {
+    if (!accessToken()) { await refreshQuota(); }
+    $("quotaHint").textContent = e.message + "，请重新登录或联系管理员。";
+  }
 }
 $("redeemInvite").onclick = async () => {
   const code = $("inviteCode").value.trim();
@@ -341,7 +344,7 @@ async function detectService() {
     if (!r.ok) throw new Error();
     const cap = await r.json();
     box.dataset.state = cap.llm ? "ready" : "offline";
-    box.textContent = cap.llm ? "● 简历服务已就绪 · 整理真实经历，登录后即可开始定制。" : "生成服务尚未就绪，仍可整理和备份资料库。";
+    box.textContent = cap.llm ? "简历服务正常" : "生成服务尚未就绪，仍可整理和备份资料库。";
     $("inviteCard").classList.toggle("hidden", !cap.invite_required);
     if (cap.invite_required) await refreshQuota();
     $("privateChoice").classList.toggle("hidden", !cap.private_vault);
@@ -412,7 +415,7 @@ async function genServerSide(company, title, jd) {
 
 $("genBtn").onclick = async () => {
   const company = $("g-company").value.trim(), title = $("g-title").value.trim(), jd = $("g-jd").value.trim();
-  if (!title && !jd) { alert("请填写岗位名称或粘贴 JD 全文"); return; }
+  if (!title && !jd) { alert("请填写岗位名称或粘贴 完整岗位描述"); return; }
   $("genLog").innerHTML = "";
   $("warnBox").classList.add("hidden");
   $("resultCard").classList.add("hidden");
@@ -425,7 +428,7 @@ $("genBtn").onclick = async () => {
     if (/服务|网络|连接/.test(e.message)) toast("请稍后重试；持续失败可联系管理员");
   } finally {
     $("genBtn").disabled = false;
-    $("genBtn").textContent = "生成定制简历 →";
+    $("genBtn").textContent = "生成简历";
   }
 };
 
