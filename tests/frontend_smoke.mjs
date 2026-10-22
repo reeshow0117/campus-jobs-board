@@ -24,6 +24,7 @@ function setup(config = {api_base: 'https://preview-api.example.invalid'}) {
       const classes = new Set();
       elements.set(id, {
         value: '', textContent: '', innerHTML: '', disabled: false, checked: false,
+        dataset: {},
         classList: {
           add: (name) => classes.add(name),
           remove: (name) => classes.delete(name),

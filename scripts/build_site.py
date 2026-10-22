@@ -20,6 +20,7 @@ def main():
         destination.mkdir(parents=True, exist_ok=True)
         for name in ("index.html", "resume.html"):
             shutil.copyfile(ROOT / "web/resume.html", destination / name)
+        shutil.copyfile(ROOT / "web/resume.css", destination / "resume.css")
         subprocess.run([sys.executable, str(ROOT / "data/build_jobs_slim.py")], cwd=ROOT, check=True)
         shutil.copyfile(ROOT / "dist/jobs_slim.json", destination / "jobs_slim.json")
         (destination / "config.js").write_text(javascript(), encoding="utf-8")
@@ -31,6 +32,7 @@ def main():
     subprocess.run([sys.executable, str(ROOT / "data/build_jobs_slim.py")], cwd=ROOT, check=True)
     shutil.copyfile(ROOT / "秋招岗位看板.html", ROOT / "dist/index.html")
     shutil.copyfile(ROOT / "web/resume.html", ROOT / "dist/resume.html")
+    shutil.copyfile(ROOT / "web/resume.css", ROOT / "dist/resume.css")
     (ROOT / "dist/config.js").write_text(javascript(), encoding="utf-8")
     print("site built:", ROOT / "dist")
 

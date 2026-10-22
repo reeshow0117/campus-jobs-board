@@ -370,6 +370,11 @@ def resume_page():
     return FileResponse(os.path.join(WEB_DIR, "resume.html"))
 
 
+@app.get("/resume.css")
+def resume_styles():
+    return FileResponse(os.path.join(WEB_DIR, "resume.css"), media_type="text/css")
+
+
 @app.get("/jobs_slim.json")
 def jobs_slim():
     path = os.path.join(DIST_DIR, "jobs_slim.json")

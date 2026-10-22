@@ -3,164 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2459d3">
+<meta name="description" content="整理真实经历，按目标岗位定制简历，预览并下载单页 A4 PDF。">
 <title>校招简历定制系统</title>
-<style>
-  :root {
-    --accent: #185FA5;
-    --text-1: #1a1a1a; --text-2: #555; --text-3: #999;
-    --bg: #f7f7f5; --card: #fff; --border: rgba(0,0,0,.1);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text-1); font-size: 14px; line-height: 1.6; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
-  .topbar h1 { font-size: 20px; font-weight: 600; }
-  .topbar h1 span { color: var(--accent); }
-  .topbar a.back { color: var(--text-2); text-decoration: none; font-size: 13px; }
-  .topbar a.back:hover { color: var(--accent); }
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-  .tabs button { background: none; border: none; padding: 8px 16px; font-size: 14px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }
-  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
-  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
-  label { display: block; font-size: 12px; color: var(--text-2); margin: 10px 0 4px; }
-  input[type=text], input[type=password], textarea, select {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
-    font-size: 13px; font-family: inherit; background: #fff; color: var(--text-1);
-  }
-  textarea { resize: vertical; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .row3 { display: grid; grid-template-columns: 80px 1fr 1fr 130px; gap: 8px; align-items: end; }
-  .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text-1); font-size: 13px; cursor: pointer; text-decoration: none; }
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { opacity: .9; color: #fff; }
-  .btn.danger:hover { border-color: #c00; color: #c00; }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .material-item { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-  .material-item .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .material-item .mid { font-weight: 600; color: var(--accent); font-size: 13px; }
-  .muted { color: var(--text-3); font-size: 12px; }
-  .log { font-size: 12px; color: var(--text-2); margin: 8px 0; min-height: 18px; }
-  .log .ok { color: #1a7f37; } .log .err { color: #c00; }
-  .warn-box { background: #fff8e6; border: 1px solid #f0c36d; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
-  .result-md h2, .result-md h3, .result-md h4 { margin: 14px 0 6px; font-weight: 600; }
-  .result-md h2 { font-size: 17px; } .result-md h3 { font-size: 15px; } .result-md h4 { font-size: 14px; }
-  .result-md ul { padding-left: 20px; } .result-md p { margin: 6px 0; }
-  .result-md table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  .result-md td { border: 1px solid var(--border); padding: 5px 8px; }
-  .cite { color: var(--text-3); font-size: 11px; }
-  .job-pick { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 8px; }
-  .job-pick .j { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .job-pick .j:hover { background: #f0f6fc; }
-  .job-pick .j .c { color: var(--text-2); font-size: 12px; }
-  .privacy { font-size: 12px; color: var(--text-3); margin-top: 6px; }
-  .hidden { display: none; }
-  .notice { background:#edf5fb; color:#245779; border:1px solid #c9ddea; border-radius:8px; padding:10px 12px; margin:0 0 14px; font-size:13px; }
-  .result-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-  .pdf-frame { width:100%; height:72vh; border:1px solid var(--border); border-radius:8px; margin-top:12px; background:#fff; }
-  code { background: #f0f0ee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-  @media (max-width: 640px) { .row, .row3 { grid-template-columns: 1fr; } }
-</style>
+<link rel="stylesheet" href="resume.css">
 </head>
 <body>
 <div class="wrap">
-  <div class="topbar">
-    <div>
-      <h1>简历<span>定制</span></h1>
-      <div class="muted">按岗位 JD 重新组合经历 · 预览并下载单页 A4 简历</div>
-    </div>
-    <a class="back" id="dashboardLink" href="https://campus-jobs-board.pages.dev/">&larr; 前往岗位看板</a>
-  </div>
-
-  <div id="serviceNotice" class="notice">本页可先整理资料库；生成与 PDF 预览需连接简历生成服务，未连接时不会把资料发送出去。</div>
-  <div id="inviteCard" class="card hidden">
-    <h2>邀请制访问</h2>
-    <label>一次性邀请码（仅用于本系统登录，不保存邀请码）</label>
-    <input type="password" id="inviteCode" autocomplete="off" placeholder="输入受邀邀请码">
-    <div style="margin-top:10px"><button class="btn primary" id="redeemInvite">兑换访问权限</button>
-      <button class="btn" id="signOutInvite">退出当前会话</button></div>
-    <div class="privacy" id="quotaHint">未登录；生成和 PDF 接口需要受邀身份。会话仅保存在此浏览器标签页。</div>
-  </div>
-  <div class="tabs">
-    <button class="on" data-tab="profile">我的资料库</button>
-    <button data-tab="gen">定制简历</button>
-  </div>
-
-  <!-- ============ 资料库 ============ -->
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">R</div><div><h1>简历工作台</h1><div class="brand-sub">YOUR NEXT OPPORTUNITY</div></div></div>
+    <a class="back" id="dashboardLink" href="https://campus-jobs-board.pages.dev/">探索岗位看板 ↗</a>
+  </header>
+  <section class="hero">
+    <div><div class="eyebrow">CAREER STUDIO · 校招简历定制</div><h2>让真实的经历，被更好地看见。</h2><p>整理你的经历素材，为每一个目标岗位，准备一份更合适的简历。</p></div>
+    <div class="flow" aria-label="使用步骤"><div class="flow-item"><b>01</b>整理资料</div><span class="flow-line"></span><div class="flow-item"><b>02</b>选择岗位</div><span class="flow-line"></span><div class="flow-item"><b>03</b>导出简历</div></div>
+  </section>
+  <div id="serviceNotice" class="notice" role="status">正在检查简历服务。你可以先整理、导入和备份资料。</div>
+  <section id="inviteCard" class="card invite-card hidden">
+    <div><h2>开启你的简历定制</h2><p class="privacy">使用邀请码登录，资料整理无需登录。</p><div class="quota-line" id="quotaHint">会话仅保存在当前浏览器标签页。</div></div>
+    <div class="invite-controls"><label class="hidden" for="inviteCode">一次性邀请码</label><input type="password" id="inviteCode" autocomplete="off" aria-label="一次性邀请码" placeholder="输入你的一次性邀请码"><button class="btn primary" id="redeemInvite">登录</button><button class="btn" id="signOutInvite">退出</button></div>
+  </section>
+  <nav class="tabs" aria-label="工作区"><button class="on" data-tab="profile"><span>01</span>我的资料库</button><button data-tab="gen"><span>02</span>定制简历</button></nav>
+  <main>
   <div id="tab-profile">
-    <div class="card">
-      <h2>基本信息</h2>
-      <div class="row">
-        <div><label>姓名</label><input type="text" id="p-name"></div>
-        <div><label>最高学历</label><input type="text" id="p-edu" placeholder="硕士 / 本科"></div>
-        <div><label>毕业时间</label><input type="text" id="p-year" placeholder="2027届"></div>
-        <div><label>求职意向</label><input type="text" id="p-expect_job" placeholder="AI产品经理 / 解决方案架构师"></div>
-        <div><label>期望城市</label><input type="text" id="p-expect_city" placeholder="深圳"></div>
-        <div><label>手机 / 邮箱</label><input type="text" id="p-contact" placeholder="可选，生成简历抬头用"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>证件照</h2>
-      <input type="file" id="photoFile" accept="image/jpeg,image/png">
-      <div class="privacy">JPG / PNG，最大 2 MB。本次生成时上传给简历服务用于 PDF 排版；照片不保存在浏览器或平台数据库，刷新后需重选。本机私人资料库模式自动使用已有证件照。</div>
-    </div>
-    <div class="card">
-      <h2>经历母库 <span class="muted">—— 所有简历只允许从这里取材，填得越细定制越准</span></h2>
-      <div id="materials"></div>
-      <button class="btn" id="addMaterial">+ 添加经历</button>
-      <button class="btn" id="loadExample">载入示例模板</button>
-    </div>
-
-    <div class="card">
-      <button class="btn primary" id="saveProfile">保存资料库</button>
-      <button class="btn" id="exportProfile">导出备份</button>
-      <button class="btn" id="importProfile">导入</button>
-      <input type="file" id="importFile" accept=".json" class="hidden">
-      <div class="privacy">资料保存在本机浏览器；点击生成时，当前资料和 JD 会发送到你连接的简历服务处理，不会默认保存到服务端。换电脑请导出备份。</div>
-    </div>
+    <div class="section-top"><div><h2>每一段经历，都是你的积累。</h2><p>先导入已有资料，或从一条经历开始。</p></div><div class="toolbar"><span class="save-state" id="saveState">资料仅保存在本机浏览器</span><button class="btn" id="importProfile">↓ 导入资料</button><button class="btn" id="exportProfile">导出备份</button><button class="btn primary" id="saveProfile">保存资料库</button><input type="file" id="importFile" accept=".json" class="hidden"></div></div>
+    <div class="workspace-grid"><div class="main-column">
+      <section class="card"><div class="card-title"><h2><span class="section-num">01</span>基本信息</h2><span class="badge">简历抬头</span></div>
+        <div class="row"><div><label for="p-name">姓名</label><input type="text" id="p-name" placeholder="你的姓名"></div><div><label for="p-contact">手机 / 邮箱</label><input type="text" id="p-contact" placeholder="用于简历中的联系方式"></div>
+        <div><label for="p-edu">最高学历</label><input type="text" id="p-edu" placeholder="例如：硕士"></div><div><label for="p-year">毕业时间</label><input type="text" id="p-year" placeholder="例如：2027 届"></div>
+        <div><label for="p-expect_job">求职意向</label><input type="text" id="p-expect_job" placeholder="例如：产品经理"></div><div><label for="p-expect_city">期望城市</label><input type="text" id="p-expect_city" placeholder="例如：深圳 / 上海"></div></div>
+      </section>
+      <section class="card"><div class="card-title"><h2><span class="section-num">02</span>经历素材</h2><span class="badge" id="materialBadge">0 条素材</span></div><p class="card-description">完整记录你做过的事。生成简历时，会按岗位从这些经历中取材。</p>
+        <div class="material-toolbar"><label class="hidden" for="materialKind">新增经历类型</label><select id="materialKind" aria-label="新增经历类型"><option value="S">实习经历</option><option value="E">教育背景</option><option value="P">项目经历</option><option value="J">技能与证书</option><option value="A">奖项荣誉</option><option value="V">社会实践</option></select><button class="btn" id="addMaterial">＋ 添加经历</button><button class="btn link" id="loadExample">查看示例模板</button></div>
+        <div class="material-filters" aria-label="筛选经历类型"><button class="on" data-kind="">全部</button><button data-kind="E">教育</button><button data-kind="S">实习</button><button data-kind="P">项目</button><button data-kind="J">技能证书</button><button data-kind="A">奖项</button><button data-kind="V">实践</button></div>
+        <div id="materials"></div><div class="materials-foot">建议写清楚：背景与目标 → 你的行动 → 可核实的成果。量化数据请以真实记录为准。</div>
+      </section>
+    </div><aside class="sidebar">
+      <section class="card summary-card"><div class="eyebrow">MY PROFILE</div><div class="summary-name" id="summaryName">你的经历，值得被看见</div><div class="summary-sub" id="summaryIntent">添加基本信息，开始整理你的求职资料。</div><div class="stat-grid"><div><strong id="materialCount">0</strong><span>经历素材</span></div><div><strong id="categoryCount">0</strong><span>覆盖类型</span></div></div></section>
+      <section class="card"><div class="card-title"><h2>简历照片</h2><span class="badge">PDF 使用</span></div><div class="photo-area"><div class="photo-slot"><span id="photoPlaceholder">证件照</span><img id="photoPreview" class="hidden" alt="本次上传的证件照"></div><div class="photo-copy"><label for="photoFile">上传 JPG / PNG</label><input type="file" id="photoFile" accept="image/jpeg,image/png"><div class="privacy">最大 2 MB，刷新后需重新选择。</div></div></div></section>
+      <section class="card"><h3>从资料到简历，只需三步</h3><div class="guide-list"><div class="guide-item"><b>1</b><div><strong>建立经历资料库</strong>导入 JSON 备份，或添加教育、实习和项目。</div></div><div class="guide-item"><b>2</b><div><strong>贴入目标岗位 JD</strong>完整的岗位描述，有助于更准确地选材。</div></div><div class="guide-item"><b>3</b><div><strong>核对并导出</strong>检查事实和来源，预览单页 PDF 后下载。</div></div></div><button class="btn link" id="goGenerate">资料准备好了，去定制 →</button></section>
+      <div class="side-note">资料默认保存在当前浏览器。换电脑或更换访问地址前，请先导出备份。只有点击生成时，素材和岗位信息才会发送给简历服务处理；照片仅用于 PDF。</div>
+    </aside></div>
   </div>
-
-  <!-- ============ 定制简历 ============ -->
   <div id="tab-gen" class="hidden">
-    <div class="card">
-      <h2>目标岗位</h2>
-      <div class="row">
-        <div><label>公司</label><input type="text" id="g-company" placeholder="虾皮-Sea"></div>
-        <div><label>岗位</label><input type="text" id="g-title" placeholder="电商产品经理"></div>
-      </div>
-      <label>JD 全文（粘贴招聘启事正文，越完整越准；不填则只用岗位名称）</label>
-      <textarea id="g-jd" rows="6" placeholder="岗位职责：…&#10;任职要求：…"></textarea>
-      <label>或从岗位库搜索（首次加载约需几秒）</label>
-      <input type="text" id="jobSearch" placeholder="输入公司或岗位关键词搜索…">
-      <div class="job-pick hidden" id="jobList"></div>
-    </div>
-
-    <div class="card">
-      <div id="privateChoice" class="notice hidden"><label style="margin:0;color:inherit"><input type="checkbox" id="usePrivateVault"> 使用本机私人 Obsidian 资料库（仅本机服务可选，不上传到网页资料库）</label></div>
-      <button class="btn primary" id="genBtn">生成定制简历</button>
-      <div class="privacy">当前使用：平台提供的模型额度。一次生成通常包含 3 次模型请求，失败重试也计入额度。</div>
-      <span class="muted" id="genHint"></span>
-      <div class="log" id="genLog"></div>
-    </div>
-
-    <div class="warn-box hidden" id="warnBox"></div>
-    <div class="card hidden" id="resultCard">
-      <h2>生成结果</h2>
-      <div class="result-actions">
-        <button class="btn" id="copyMd">复制带溯源标记的稿件</button>
-        <button class="btn hidden" id="previewPdf">预览正式 PDF</button>
-        <button class="btn primary hidden" id="dlPdf">下载单页 PDF</button>
-      </div>
-      <div class="muted" style="margin:10px 0">➢ 左对齐 · 宋体/衬线体 · 层次加粗 · 有照片时自动避让分隔线。请核对真实 JD 和经历事实后再投递。</div>
-      <div class="result-md" id="resultMd"></div>
-      <iframe id="pdfFrame" class="pdf-frame hidden" title="正式 PDF 预览"></iframe>
-    </div>
+    <div class="section-top"><div><h2>一份简历，对应一个机会。</h2><p>写下你的目标岗位，让已有经历更有重点。</p></div><span class="save-state" id="generationMaterialHint">从你的资料库中取材</span></div>
+    <div class="workspace-grid"><div class="main-column">
+      <section class="card"><div class="card-title"><h2><span class="section-num">01</span>目标岗位</h2><span class="badge">输入或从岗位库选择</span></div><div class="row"><div><label for="g-company">目标公司</label><input type="text" id="g-company" placeholder="例如：腾讯"></div><div><label for="g-title">岗位名称</label><input type="text" id="g-title" placeholder="例如：产品经理实习生"></div></div><div class="field-space"><label for="jobSearch">从岗位库快速查找</label><input type="text" id="jobSearch" placeholder="搜索公司或岗位关键词…"><div class="job-pick hidden" id="jobList"></div></div></section>
+      <section class="card"><div class="card-title"><h2><span class="section-num">02</span>岗位描述</h2><span class="badge">JD</span></div><p class="card-description">粘贴职责和任职要求。描述越完整，选材和表达越贴合。</p><label class="hidden" for="g-jd">JD 全文</label><textarea id="g-jd" rows="10" placeholder="岗位职责：&#10;1. …&#10;&#10;任职要求：&#10;1. …"></textarea><div class="privacy">暂时没有完整 JD，也可以先填写岗位名称。</div></section>
+    </div><aside class="sidebar">
+      <section class="card generate-card"><div class="eyebrow">READY FOR YOUR NEXT STEP</div><div class="generate-title">写出更贴合岗位的你。</div><p>分析岗位要求，选择相关经历，再组织为一份有来源依据的简历。</p><div id="privateChoice" class="notice hidden"><label><input type="checkbox" id="usePrivateVault"> 使用本机私人 Obsidian 资料库</label></div><button class="btn primary full large" id="genBtn">生成定制简历 →</button><div class="quota-explain">使用平台模型额度。通常每次生成包含 3 次模型请求，失败重试也计入额度。</div><span class="muted" id="genHint" role="status"></span><div class="log" id="genLog" aria-live="polite"></div></section>
+      <section class="card"><h3>生成后，请再确认</h3><p class="privacy">经历、时间与量化结果是否准确；重点是否回应岗位要求。来源标记可帮助你回查原始素材。</p><p class="privacy">上传证件照后，即可预览并下载单页 A4 PDF。</p></section>
+    </aside></div>
+    <div class="warn-box hidden" id="warnBox" role="alert"></div>
+    <section class="card hidden" id="resultCard"><div class="result-title"><h2>你的定制简历</h2><div class="result-actions"><button class="btn" id="copyMd">复制正文与来源</button><button class="btn hidden" id="previewPdf">预览 PDF</button><button class="btn primary hidden" id="dlPdf">下载单页 PDF ↓</button></div></div><div class="result-note">以下为带来源标记的核对稿，正式 PDF 会移除标记。请核对后再投递。</div><div class="result-md" id="resultMd"></div><iframe id="pdfFrame" class="pdf-frame hidden" title="正式 PDF 预览"></iframe></section>
   </div>
-
+  </main>
+  <footer class="footer"><span>为每一次认真准备的机会。</span><span>真实素材 · 岗位定制 · 单页 A4</span></footer>
 </div>
-
 <script src="config.js"></script>
 <script>
 "use strict";
@@ -178,32 +77,57 @@ function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").re
 function toast(msg) { const el = $("genHint"); el.textContent = msg; setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 3000); }
 
 /* ================= 选项卡 ================= */
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
-  b.classList.add("on");
-  ["profile","gen"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
-});
+function switchTab(tab) {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.tab === tab));
+  ["profile","gen"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== tab));
+}
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+$("goGenerate").onclick = () => { switchTab("gen"); $("g-company").focus(); };
 
 /* ================= 资料库编辑 ================= */
 const KIND_LABEL = { E: "教育", S: "实习", P: "项目", J: "技能/证书", A: "奖项", V: "社会实践" };
+let activeKind = "";
+function syncSummary() {
+  $("materialCount").textContent = materials.length;
+  $("materialBadge").textContent = materials.length + " 条素材";
+  $("categoryCount").textContent = new Set(materials.map(m => m.id[0])).size;
+  $("summaryName").textContent = $("p-name").value.trim() || "你的经历，值得被看见";
+  $("summaryIntent").textContent = $("p-expect_job").value.trim() || "添加基本信息，开始整理你的求职资料。";
+  $("generationMaterialHint").textContent = "将从你的 " + materials.length + " 条素材中选材";
+}
+function markDirty() {
+  $("saveState").textContent = "有修改，记得保存";
+  $("saveState").classList.remove("saved");
+  syncSummary();
+}
+document.querySelectorAll(".material-filters button").forEach(b => b.onclick = () => {
+  activeKind = b.dataset.kind;
+  renderMaterials();
+});
 function nextId(kind) {
   let n = 1;
   while (materials.some(m => m.id === kind + n)) n++;
   return kind + n;
 }
 function renderMaterials() {
+  syncSummary();
+  document.querySelectorAll(".material-filters button").forEach(b => b.classList.toggle("on", b.dataset.kind === activeKind));
   const box = $("materials");
   box.innerHTML = "";
   if (!materials.length) {
-    box.innerHTML = '<div class="muted" style="padding:8px 0">还没有经历，点「添加经历」或「载入示例模板」开始。</div>';
+    box.innerHTML = '<div class="empty-state"><div class="empty-symbol" aria-hidden="true"></div><strong>把你的第一段经历放进来</strong><p>导入已有资料备份，或点击上方「添加经历」。</p></div>';
     return;
   }
+  let shown = 0;
   materials.forEach((m, i) => {
-    const div = document.createElement("div");
+    if (activeKind && m.id[0] !== activeKind) return;
+    const div = document.createElement("details");
     div.className = "material-item";
+    div.open = shown++ === 0 || !m.org;
     div.innerHTML =
+      '<summary><span class="type-badge">' + esc(KIND_LABEL[m.id[0]]) + '</span><div class="material-summary"><strong>' + esc(m.org || "待填写的经历") + '</strong><small>' + esc([m.role,m.period].filter(Boolean).join(" · ") || "点击展开，补充角色、时间与成果") + '</small></div></summary><div class="material-body">' +
       '<div class="head"><span class="mid">' + esc(m.id) + " · " + KIND_LABEL[m.id[0]] + '</span>' +
-      '<button class="btn danger" data-del="' + i + '">删除</button></div>' +
+      '<button class="btn danger" data-del="' + i + '">删除此条</button></div>' +
       '<div class="row3">' +
       '<div><label>编号</label><input type="text" value="' + esc(m.id) + '" disabled></div>' +
       '<div><label>组织 / 学校 / 项目名</label><input type="text" data-f="org" data-i="' + i + '" value="' + esc(m.org) + '"></div>' +
@@ -211,20 +135,28 @@ function renderMaterials() {
       '<div><label>时间段</label><input type="text" data-f="period" data-i="' + i + '" value="' + esc(m.period) + '"></div>' +
       '</div>' +
       '<label>要点（每行一条，写清做了什么 + 量化结果）</label>' +
-      '<textarea rows="3" data-f="body" data-i="' + i + '">' + esc(m.body) + '</textarea>';
+      '<textarea rows="4" data-f="body" data-i="' + i + '">' + esc(m.body) + '</textarea></div>';
     box.appendChild(div);
   });
+  if (!shown) box.innerHTML = '<div class="empty-state"><strong>还没有这类经历</strong><p>选择上方类型，添加一条真实的经历。</p></div>';
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
-    if (confirm("删除这条经历？")) { materials.splice(Number(b.dataset.del), 1); renderMaterials(); }
+    if (confirm("删除这条经历？")) { materials.splice(Number(b.dataset.del), 1); markDirty(); renderMaterials(); }
   });
   box.querySelectorAll("[data-f]").forEach(el => el.oninput = () => {
-    materials[Number(el.dataset.i)][el.dataset.f] = el.value;
+    const item = materials[Number(el.dataset.i)];
+    item[el.dataset.f] = el.value;
+    const summary = el.closest("details").querySelector(".material-summary");
+    summary.querySelector("strong").textContent = item.org || "待填写的经历";
+    summary.querySelector("small").textContent = [item.role,item.period].filter(Boolean).join(" · ");
+    markDirty();
   });
 }
 $("addMaterial").onclick = () => {
-  const kind = prompt("经历类型：E=教育 S=实习 P=项目 J=技能/证书 A=奖项 V=社会实践", "S");
-  if (!kind || !KIND_LABEL[kind[0].toUpperCase()]) return;
-  materials.push({ id: nextId(kind[0].toUpperCase()), org: "", role: "", period: "", body: "" });
+  const kind = $("materialKind").value;
+  if (!KIND_LABEL[kind]) return;
+  activeKind = kind;
+  materials.push({ id: nextId(kind), org: "", role: "", period: "", body: "" });
+  markDirty();
   renderMaterials();
 };
 $("loadExample").onclick = () => {
@@ -235,6 +167,8 @@ $("loadExample").onclick = () => {
     { id: "P1", org: "某项目", role: "独立开发", period: "2025", body: "- 做了什么、用了什么技术、结果如何" },
     { id: "J1", org: "技能与证书", role: "-", period: "-", body: "- 证书 / 工具 / 语言" },
   ];
+  activeKind = "";
+  markDirty();
   renderMaterials();
 };
 $("saveProfile").onclick = () => {
@@ -243,6 +177,8 @@ $("saveProfile").onclick = () => {
   ["name","edu","year","expect_job","expect_city","contact"].forEach(k => profile[k] = $("p-"+k).value.trim());
   localStorage.setItem(LS.profile, JSON.stringify(profile));
   localStorage.setItem(LS.materials, JSON.stringify(materials));
+  $("saveState").textContent = "已保存到本机";
+  $("saveState").classList.add("saved");
   toast("已保存到本机浏览器");
 };
 $("exportProfile").onclick = () => {
@@ -263,7 +199,8 @@ $("importFile").onchange = (e) => {
     try {
       const d = JSON.parse(r.result);
       if (d.profile) Object.entries(d.profile).forEach(([k,v]) => { if ($("p-"+k)) $("p-"+k).value = v; });
-      if (Array.isArray(d.materials)) { materials = d.materials; renderMaterials(); }
+      if (Array.isArray(d.materials)) { materials = d.materials; activeKind = ""; renderMaterials(); }
+      markDirty();
       toast("导入成功，记得点保存");
     } catch { alert("文件格式不对"); }
   };
@@ -345,6 +282,8 @@ function invalidatePdf() {
 $("photoFile").onchange = async e => {
   const file = e.target.files[0];
   photoDataUrl = null;
+  $("photoPreview").classList.add("hidden");
+  $("photoPlaceholder").classList.remove("hidden");
   invalidatePdf();
   if (!file) return;
   if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 2_000_000) {
@@ -356,6 +295,9 @@ $("photoFile").onchange = async e => {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+  $("photoPreview").src = photoDataUrl;
+  $("photoPreview").classList.remove("hidden");
+  $("photoPlaceholder").classList.add("hidden");
 };
 function accessToken() {
   try {
@@ -398,11 +340,13 @@ async function detectService() {
     const r = await fetch(serverBase() + "/api/capabilities", { signal: AbortSignal.timeout(5000) });
     if (!r.ok) throw new Error();
     const cap = await r.json();
-    box.textContent = cap.llm ? "简历服务已连接。请先使用邀请码登录，再粘贴 JD 生成简历。" : "简历服务已连接，但模型尚未配置；暂时无法生成简历。";
+    box.dataset.state = cap.llm ? "ready" : "offline";
+    box.textContent = cap.llm ? "● 简历服务已就绪 · 整理真实经历，登录后即可开始定制。" : "生成服务尚未就绪，仍可整理和备份资料库。";
     $("inviteCard").classList.toggle("hidden", !cap.invite_required);
     if (cap.invite_required) await refreshQuota();
     $("privateChoice").classList.toggle("hidden", !cap.private_vault);
   } catch {
+    box.dataset.state = "offline";
     box.textContent = "简历服务暂不可用：目前可以整理和备份资料库，请稍后重试。";
     $("inviteCard").classList.add("hidden");
     $("privateChoice").classList.add("hidden");
@@ -473,6 +417,7 @@ $("genBtn").onclick = async () => {
   $("warnBox").classList.add("hidden");
   $("resultCard").classList.add("hidden");
   $("genBtn").disabled = true;
+  $("genBtn").textContent = "正在生成，请稍候…";
   try {
     await genServerSide(company, title, jd);
   } catch (e) {
@@ -480,6 +425,7 @@ $("genBtn").onclick = async () => {
     if (/服务|网络|连接/.test(e.message)) toast("请稍后重试；持续失败可联系管理员");
   } finally {
     $("genBtn").disabled = false;
+    $("genBtn").textContent = "生成定制简历 →";
   }
 };
 
@@ -557,9 +503,11 @@ function renderMarkdown(md) {
 (function init() {
   const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
   Object.entries(profile).forEach(([k, v]) => { if ($("p-" + k)) $("p-" + k).value = v; });
+  ["name","edu","year","expect_job","expect_city","contact"].forEach(k => $("p-" + k).oninput = markDirty);
   renderMaterials();
   detectService();
 })();
+
 </script>
 </body>
 </html>
