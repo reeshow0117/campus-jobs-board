@@ -4,6 +4,7 @@
 """
 import argparse
 import ast
+import hashlib
 from datetime import datetime, timezone
 import json
 import os
@@ -109,9 +110,14 @@ def main():
     parser.add_argument("--root", type=Path, default=Path("/opt/resume-platform"))
     parser.add_argument("--env-file", type=Path, default=Path("/etc/resume-platform.env"))
     parser.add_argument("--activate", action="store_true")
+    parser.add_argument("--archive", type=Path, help="可选：已通过控制台上传的源码发布包")
+    parser.add_argument("--archive-sha256", help="使用上传包时必须提供本机计算的 SHA-256")
     args = parser.parse_args()
     if not re.fullmatch(r"[0-9a-f]{40}", args.commit):
         parser.error("必须使用完整提交 SHA")
+    if args.archive:
+        if not args.archive_sha256 or hashlib.sha256(args.archive.read_bytes()).hexdigest() != args.archive_sha256:
+            parser.error("上传包的 SHA-256 校验未通过")
     current = args.root / "current"
     if not current.is_symlink():
         raise RuntimeError("current 不是既有版本符号链接，未修改生产服务")
@@ -121,9 +127,13 @@ def main():
         raise RuntimeError("候选版本目录已存在，请先检查上一次部署结果")
     release.mkdir(parents=True, mode=0o755)
     archive = release / "source.zip"
-    print("Downloading fixed commit", args.commit, flush=True)
-    with urllib.request.urlopen("https://codeload.github.com/reeshow0117/campus-jobs-board/zip/" + args.commit, timeout=60) as src, archive.open("wb") as dst:
-        shutil.copyfileobj(src, dst)
+    if args.archive:
+        shutil.copyfile(args.archive, archive)
+        print("Verified uploaded release for", args.commit, flush=True)
+    else:
+        print("Downloading fixed commit", args.commit, flush=True)
+        with urllib.request.urlopen("https://codeload.github.com/reeshow0117/campus-jobs-board/zip/" + args.commit, timeout=60) as src, archive.open("wb") as dst:
+            shutil.copyfileobj(src, dst)
     with zipfile.ZipFile(archive) as bundle:
         for item in bundle.infolist():
             rel = PurePosixPath(*PurePosixPath(item.filename).parts[1:])
