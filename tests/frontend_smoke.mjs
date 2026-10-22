@@ -99,3 +99,23 @@ test('跨域邀请码登录后携带令牌，请求额满/失败时显示服务�
   lookup('signOutInvite').onclick();
   assert.equal(session.has('qz_invite_session_v1'), false);
 });
+
+test('保存相同服务地址保留一次性邀请会话，更换地址才清理', async () => {
+  const { session, lookup } = setup();
+  lookup('inviteCode').value = 'synthetic-invite';
+  await lookup('redeemInvite').onclick();
+  lookup('s-endpoint').value = 'https://preview-api.example.invalid';
+  lookup('saveSettings').onclick();
+  assert.equal(session.has('qz_invite_session_v1'), true);
+  lookup('s-endpoint').value = 'https://other.example.invalid';
+  lookup('saveSettings').onclick();
+  assert.equal(session.has('qz_invite_session_v1'), false);
+});
+
+test('异常 API 响应不以对象字符串展示，照片更新清空 PDF 缓存', async () => {
+  const { sandbox, lookup } = setup();
+  vm.runInContext('pdfBlob = {old:true}; photoDataUrl = "old";', sandbox);
+  await lookup('photoFile').onchange({target: {files: []}});
+  assert.equal(vm.runInContext('pdfBlob', sandbox), null);
+  assert.equal(vm.runInContext('photoDataUrl', sandbox), null);
+});

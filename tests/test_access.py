@@ -21,7 +21,8 @@ class AccessTests(unittest.TestCase):
         self.path = os.path.join(tmp.name, "access.sqlite3")
         self.store = access.AccessStore(self.path)
         self.store.init()
-        self.assertEqual(0o600, os.stat(self.path).st_mode & 0o777)
+        if os.name != "nt":
+            self.assertEqual(0o600, os.stat(self.path).st_mode & 0o777)
         for name, value in (("ACCESS_DB", self.path), ("PRIVATE_VAULT", False)):
             p = patch.object(server, name, value)
             p.start()
@@ -107,7 +108,7 @@ class AccessTests(unittest.TestCase):
         def generate(*_):
             return llm.chat("dummy", retries=2)
         with patch.dict(os.environ, env), patch.object(server.resume_gen, "llm_chain", side_effect=generate), \
-             patch.object(llm.urllib.request, "urlopen", side_effect=urllib.error.URLError("offline")) as outbound, \
+             patch.object(llm, "open_model", side_effect=urllib.error.URLError("offline")) as outbound, \
              patch.object(llm.time, "sleep"):
             result = client.post("/api/resume", json=PAYLOAD)
         self.assertEqual(429, result.status_code)
@@ -127,7 +128,7 @@ class AccessTests(unittest.TestCase):
                    "QIUZHAO_LLM_MODEL": "fake", "QIUZHAO_PLATFORM_MODEL_DAILY_LIMIT": "2"}
             with patch.dict(os.environ, env), patch.object(server.resume_gen, "llm_chain",
                  side_effect=lambda *_: llm.chat("dummy", retries=2)), \
-                 patch.object(llm.urllib.request, "urlopen") as outbound:
+                 patch.object(llm, "open_model") as outbound:
                 result = second.post("/api/resume", json=PAYLOAD)
             self.assertEqual(429, result.status_code)
             self.assertIn("平台", result.json()["detail"])
@@ -153,7 +154,7 @@ class AccessTests(unittest.TestCase):
             access.AccessStore(os.path.join(project, "agent", "state", "access.sqlite3"))
         env = {"QIUZHAO_LLM_API_KEY": "dummy", "QIUZHAO_LLM_BASE_URL": "http://model.example.invalid/v1",
                "QIUZHAO_LLM_MODEL": "fake"}
-        with patch.dict(os.environ, env), patch.object(llm.urllib.request, "urlopen") as outbound:
+        with patch.dict(os.environ, env), patch.object(llm, "open_model") as outbound:
             with self.assertRaises(llm.LLMError):
                 llm.chat("synthetic")
             outbound.assert_not_called()

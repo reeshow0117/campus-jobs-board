@@ -107,7 +107,9 @@ class ResumeFlowTests(unittest.TestCase):
                         {m["id"]: m for m in self.materials}))
 
     def test_static_routes(self):
-        self.assertEqual(200, self.client.get("/").status_code)
+        self.assertIn("校招简历定制系统", self.client.get("/").text)
+        self.assertIn("秋招岗位看板", self.client.get("/dashboard.html").text)
+        self.assertIn("/dashboard.html", self.client.get("/config.js").text)
         self.assertEqual(200, self.client.get("/resume.html").status_code)
         self.assertEqual(200, self.client.get("/jobs_slim.json").status_code)
 

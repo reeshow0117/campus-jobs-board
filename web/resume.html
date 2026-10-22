@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>简历定制 · 秋招助手</title>
+<title>校招简历定制系统</title>
 <style>
   :root {
     --accent: #185FA5;
@@ -60,6 +60,7 @@
   .result-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .pdf-frame { width:100%; height:72vh; border:1px solid var(--border); border-radius:8px; margin-top:12px; background:#fff; }
   code { background: #f0f0ee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  @media (max-width: 640px) { .row, .row3 { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -69,7 +70,7 @@
       <h1>简历<span>定制</span></h1>
       <div class="muted">按岗位 JD 重新组合经历 · 预览并下载单页 A4 简历</div>
     </div>
-    <a class="back" href="index.html">&larr; 返回岗位看板</a>
+    <a class="back" id="dashboardLink" href="https://campus-jobs-board.pages.dev/">&larr; 前往岗位看板</a>
   </div>
 
   <div id="serviceNotice" class="notice">本页可先整理资料库；生成与 PDF 预览需连接简历生成服务，未连接时不会把资料发送出去。</div>
@@ -140,6 +141,7 @@
     <div class="card">
       <div id="privateChoice" class="notice hidden"><label style="margin:0;color:inherit"><input type="checkbox" id="usePrivateVault"> 使用本机私人 Obsidian 资料库（仅本机服务可选，不上传到网页资料库）</label></div>
       <button class="btn primary" id="genBtn">生成定制简历</button>
+      <div class="privacy">当前使用：平台提供的模型额度。一次生成通常包含 3 次模型请求，失败重试也计入额度。</div>
       <span class="muted" id="genHint"></span>
       <div class="log" id="genLog"></div>
     </div>
@@ -170,6 +172,7 @@
   </div>
 </div>
 
+<script src="config.js"></script>
 <script>
 "use strict";
 /* ================= 状态与存储 ================= */
@@ -177,6 +180,7 @@ const LS = { profile: "qz_profile_v1", materials: "qz_materials_v1", settings: "
 const SESSION_KEY = "qz_invite_session_v1";
 let materials = JSON.parse(localStorage.getItem(LS.materials) || "[]");
 let settings = JSON.parse(localStorage.getItem(LS.settings) || "{}");
+const siteConfig = window.QIUZHAO_CONFIG || {};
 // 旧版 BYOK 曾保存浏览器模型 Key；升级后仅保留服务地址，清理遗留密钥。
 if (Object.keys(settings).some(key => key !== "endpoint")) {
   settings = { endpoint: settings.endpoint || "" };
@@ -184,6 +188,7 @@ if (Object.keys(settings).some(key => key !== "endpoint")) {
 }
 
 const $ = (id) => document.getElementById(id);
+if (siteConfig.dashboard_url) $("dashboardLink").href = siteConfig.dashboard_url;
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 function toast(msg) { const el = $("genHint"); el.textContent = msg; setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 3000); }
 
@@ -256,12 +261,13 @@ $("saveProfile").onclick = () => {
   toast("已保存到本机浏览器");
 };
 $("exportProfile").onclick = () => {
-  const profile = JSON.parse(localStorage.getItem(LS.profile) || "{}");
+  const profile = { ...JSON.parse(localStorage.getItem(LS.profile) || "{}"), ...currentProfile() };
   const blob = new Blob([JSON.stringify({ profile, materials }, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "秋招资料库备份.json";
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
 };
 $("importProfile").onclick = () => $("importFile").click();
 $("importFile").onchange = (e) => {
@@ -314,7 +320,7 @@ $("jobSearch").oninput = () => {
 
 /* ================= 仅调用受邀简历服务 ================= */
 function serverBase() {
-  const value = (settings.endpoint || "").trim().replace(/\/$/, "");
+  const value = (settings.endpoint || siteConfig.api_base || "").trim().replace(/\/$/, "");
   if (!value) return "";
   const url = new URL(value);
   const local = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
@@ -340,10 +346,21 @@ function candidatePayload() {
   if (!profile.name || !materials.length) throw new Error("请先在「我的资料库」填写姓名、教育和经历，再生成简历");
   return { source, profile, materials };
 }
-let photoDataUrl = null, pdfBlob = null, pdfObjectUrl = null;
+let photoDataUrl = null, pdfBlob = null, pdfObjectUrl = null, pdfPending = null;
+let resultCandidate = null;
+let pdfRevision = 0;
+function invalidatePdf() {
+  pdfRevision++;
+  pdfBlob = null;
+  if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl);
+  pdfObjectUrl = null;
+  $("pdfFrame").src = "about:blank";
+  $("pdfFrame").classList.add("hidden");
+}
 $("photoFile").onchange = async e => {
   const file = e.target.files[0];
   photoDataUrl = null;
+  invalidatePdf();
   if (!file) return;
   if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 2_000_000) {
     e.target.value = ""; alert("请选择 2 MB 以内的 JPG 或 PNG 照片"); return;
@@ -365,7 +382,7 @@ async function refreshQuota() {
   const token = accessToken();
   if (!token) { $("quotaHint").textContent = "未登录；生成和 PDF 接口需要受邀身份。会话仅保存在此浏览器标签页。"; return; }
   try {
-    const r = await fetch(serverBase() + "/api/quota", { headers: { Authorization: "Bearer " + token } });
+    const r = await fetch(serverBase() + "/api/quota", { headers: { Authorization: "Bearer " + token }, signal: AbortSignal.timeout(5000) });
     if (r.status === 401) { sessionStorage.removeItem(SESSION_KEY); throw new Error("会话已失效"); }
     if (!r.ok) throw new Error("用量暂不可查");
     const q = await r.json();
@@ -379,9 +396,10 @@ $("redeemInvite").onclick = async () => {
   try {
     const r = await fetch(serverBase() + "/api/invite/redeem", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ invite_code: code }),
+      signal: AbortSignal.timeout(10000),
     });
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.detail || "邀请码兑换失败");
+    if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : "邀请码格式无效或兑换失败");
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ endpoint: serverBase(), token: data.access_token }));
     $("inviteCode").value = "";
     await refreshQuota();
@@ -412,11 +430,8 @@ function log(msg, cls) {
 }
 function showResult(md, warnings) {
   window._lastMd = md;
-  pdfBlob = null;
-  if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl);
-  pdfObjectUrl = null;
-  $("pdfFrame").src = "about:blank";
-  $("pdfFrame").classList.add("hidden");
+  invalidatePdf();
+  $("warnBox").classList.add("hidden");
   if (warnings && warnings.length) {
     $("warnBox").innerHTML = "<b>溯源未通过，PDF 导出已禁用，请核对：</b><br>" + warnings.map(esc).join("<br>");
     $("warnBox").classList.remove("hidden");
@@ -444,16 +459,23 @@ async function postService(path, payload, timeoutMs) {
       const detail = data.detail;
       if (r.status === 401) sessionStorage.removeItem(SESSION_KEY);
       if ([401, 429, 502].includes(r.status)) refreshQuota();
-      throw new Error(typeof detail === "string" ? detail : detail?.message || "服务返回错误 " + r.status);
+      const validation = Array.isArray(detail) ? "资料字段不符合要求，请检查姓名、经历编号、内容长度和 JD" : "";
+      throw new Error(typeof detail === "string" ? detail : detail?.message || validation || "服务返回错误 " + r.status);
     }
     if (path === "/api/resume") refreshQuota();
     return r;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("服务响应超时；本次调用可能已消耗额度，请稍后查看用量再重试");
+    throw e;
   } finally { clearTimeout(timer); }
 }
 async function genServerSide(company, title, jd) {
   log("[1/2] 解析 JD → 从你的素材选材 → 写作与溯源自检…");
-  const r = await postService("/api/resume", { company, title, jd, ...candidatePayload() }, 180000);
+  const candidate = JSON.parse(JSON.stringify(candidatePayload()));
+  const r = await postService("/api/resume", { company, title, jd, ...candidate }, 110000);
   const data = await r.json();
+  if (typeof data.markdown !== "string" || !data.markdown.trim()) throw new Error("服务未返回有效简历正文");
+  resultCandidate = candidate;
   log("[2/2] 完成" + (data.warnings?.length ? "；有 " + data.warnings.length + " 处需修改" : "；溯源自检通过"),
       data.warnings?.length ? "err" : "ok");
   showResult(data.markdown, data.warnings);
@@ -478,14 +500,24 @@ $("genBtn").onclick = async () => {
 
 async function ensurePdf() {
   if (pdfBlob) return pdfBlob;
+  if (pdfPending) return pdfPending;
   if (!window._lastMd) throw new Error("请先生成简历");
-  const r = await postService("/api/resume_pdf", {
-    markdown: window._lastMd, ...candidatePayload(),
-    photo_data_url: currentSource() === "browser" ? photoDataUrl : null,
-  }, 60000);
-  pdfBlob = await r.blob();
-  if (pdfBlob.type !== "application/pdf" || pdfBlob.size < 1000) throw new Error("服务没有返回有效 PDF");
-  return pdfBlob;
+  const candidate = resultCandidate || candidatePayload();
+  const revision = pdfRevision;
+  if (candidate.source === "browser" && !photoDataUrl) throw new Error("请先在「我的资料库」上传证件照");
+  const photo = candidate.source === "browser" ? photoDataUrl : null;
+  pdfPending = (async () => {
+    const r = await postService("/api/resume_pdf", {
+      markdown: window._lastMd, ...candidate, photo_data_url: photo,
+    }, 60000);
+    const blob = await r.blob();
+    if (blob.type !== "application/pdf" || blob.size < 1000) throw new Error("服务没有返回有效 PDF");
+    if (revision !== pdfRevision) throw new Error("简历或照片已更换，请重新预览 PDF");
+    pdfBlob = blob;
+    return blob;
+  })();
+  try { return await pdfPending; }
+  finally { pdfPending = null; }
 }
 $("previewPdf").onclick = async () => {
   $("previewPdf").disabled = true;
@@ -506,7 +538,7 @@ $("dlPdf").onclick = async () => {
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
     a.href = url;
-    const name = currentSource() === "browser" ? currentProfile().name : "定制";
+    const name = resultCandidate?.source === "browser" ? resultCandidate.profile.name : "定制";
     a.download = (name || "候选人").replace(/[\\/:*?"<>|]/g, "") + "-定制简历.pdf";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -542,13 +574,22 @@ function loadSettings() {
 }
 $("saveSettings").onclick = () => {
   const previous = settings;
+  let previousBase;
+  try { previousBase = serverBase(); } catch { previousBase = null; }
   settings = { endpoint: $("s-endpoint").value.trim() };
   try { serverBase(); }
   catch (e) { settings = previous; alert(e.message); return; }
   localStorage.setItem(LS.settings, JSON.stringify(settings));
-  sessionStorage.removeItem(SESSION_KEY); // 换服务地址必须重新登录，防止带令牌请求错误的域名。
+  const changed = previousBase !== serverBase();
+  if (changed) {
+    sessionStorage.removeItem(SESSION_KEY);
+    invalidatePdf();
+    window._lastMd = null;
+    resultCandidate = null;
+    $("resultCard").classList.add("hidden");
+  }
   detectService();
-  toast("设置已保存；如需生成，请重新兑换邀请");
+  toast(changed ? "服务地址已更换，请重新登录" : "设置已保存，当前会话保留");
 };
 
 /* ================= 初始化 ================= */

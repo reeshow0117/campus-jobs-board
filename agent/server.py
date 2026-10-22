@@ -13,22 +13,24 @@ import os
 import re
 import sys
 import tempfile
+import time
 from typing import Literal
 from urllib.parse import urlsplit
 
 if __package__:
-    from . import access, llm, resume_gen, resume_pdf, vault_loader
+    from . import access, llm, public_config, resume_gen, resume_pdf, vault_loader
 else:  # 兼容 python agent/server.py 启动方式
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import access
     import llm
+    import public_config
     import resume_gen
     import resume_pdf
     import vault_loader
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
@@ -225,7 +227,8 @@ def capabilities(request: Request):
         except HTTPException:
             ready = False
     return {"private_vault": private_allowed(request), "pdf": True,
-            "invite_required": not private_allowed(request), "llm": ready}
+            "invite_required": not private_allowed(request), "llm": ready,
+            "model_source": "platform", "generation_timeout_seconds": 90}
 
 
 @app.post("/api/invite/redeem")
@@ -271,6 +274,7 @@ def gen_resume(req: ResumeReq, request: Request):
         store.consume(user_id, "model", platform_daily_limit=platform_limit)
 
     token = llm.charge_attempt.set(charge if store is not None else None)
+    deadline_token = llm.deadline.set(time.monotonic() + 90)
     try:
         md = resume_gen.llm_chain(profile, materials, req.company, req.title,
                                   req.jd.strip() or req.title.strip())
@@ -279,8 +283,9 @@ def gen_resume(req: ResumeReq, request: Request):
     except sqlite3.Error as exc:
         raise HTTPException(503, "访问控制暂不可用") from exc
     except llm.LLMError as exc:
-        raise HTTPException(502, "模型生成失败，请稍后重试") from exc
+        raise HTTPException(502, exc.public_message) from exc
     finally:
+        llm.deadline.reset(deadline_token)
         llm.charge_attempt.reset(token)
     warnings = resume_gen.verify_resume(md, materials)
     # 不用只有问题清单的 prompt 重新生成：失去原始素材的重试会凭空编造。
@@ -341,7 +346,23 @@ def reload_vault(request: Request):
 
 @app.get("/")
 def index():
+    return resume_page()
+
+
+@app.get("/index.html")
+def index_alias():
+    return resume_page()
+
+
+@app.get("/dashboard.html")
+def dashboard_page():
     return FileResponse(os.path.join(DIST_DIR, "index.html"))
+
+
+@app.get("/config.js")
+def frontend_config():
+    return Response(public_config.javascript(dashboard_url="/dashboard.html"), media_type="application/javascript",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.get("/resume.html")

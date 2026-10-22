@@ -29,7 +29,11 @@ class AccessStore:
     def __init__(self, path):
         self.path = os.path.realpath(path)
         project_root = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
-        if os.path.commonpath((self.path, project_root)) == project_root:
+        try:
+            inside = os.path.commonpath((self.path, project_root)) == project_root
+        except ValueError:  # Windows 的仓库和私有状态可以位于不同盘符。
+            inside = False
+        if inside:
             raise ValueError("访问状态库必须位于仓库外，避免将会话与用量数据提交到 Git")
 
     def connect(self, create=False):

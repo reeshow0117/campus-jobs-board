@@ -33,3 +33,4 @@ node_modules/
 # 部署平台残留
 dist/.edgeone/
 dist/.env
+dist/resume-app/
