@@ -122,6 +122,9 @@ def main():
     if not current.is_symlink():
         raise RuntimeError("current 不是既有版本符号链接，未修改生产服务")
     previous = current.resolve(strict=True)
+    # 发布包只含公开代码；systemd 的非 root 用户必须能进入目录并读取文件。
+    # 不继承管理员终端可能使用的 077；私有状态备份仍在下方显式限制权限。
+    os.umask(0o022)
     release = args.root / "releases" / args.commit[:12]
     if release.exists():
         raise RuntimeError("候选版本目录已存在，请先检查上一次部署结果")
