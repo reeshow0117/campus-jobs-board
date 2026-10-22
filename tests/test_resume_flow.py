@@ -37,6 +37,13 @@ def fake_photo():
 
 
 class ResumeFlowTests(unittest.TestCase):
+    def test_resume_only_deployment_links_to_hosted_dashboard(self):
+        with tempfile.TemporaryDirectory() as missing_dist, patch.object(server, "DIST_DIR", missing_dist):
+            response = self.client.get("/dashboard.html", follow_redirects=False)
+            self.assertEqual(307, response.status_code)
+            self.assertEqual("https://campus-jobs-board.pages.dev/", response.headers["location"])
+            self.assertIn("https://campus-jobs-board.pages.dev/", self.client.get("/config.js").text)
+
     def setUp(self):
         state_dir = tempfile.TemporaryDirectory()
         self.addCleanup(state_dir.cleanup)

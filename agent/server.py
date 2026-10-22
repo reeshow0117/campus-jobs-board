@@ -30,7 +30,7 @@ else:  # 兼容 python agent/server.py 启动方式
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
@@ -356,12 +356,16 @@ def index_alias():
 
 @app.get("/dashboard.html")
 def dashboard_page():
-    return FileResponse(os.path.join(DIST_DIR, "index.html"))
+    path = os.path.join(DIST_DIR, "index.html")
+    if not os.path.isfile(path):
+        return RedirectResponse("https://campus-jobs-board.pages.dev/")
+    return FileResponse(path)
 
 
 @app.get("/config.js")
 def frontend_config():
-    return Response(public_config.javascript(dashboard_url="/dashboard.html"), media_type="application/javascript",
+    board = "/dashboard.html" if os.path.isfile(os.path.join(DIST_DIR, "index.html")) else None
+    return Response(public_config.javascript(dashboard_url=board), media_type="application/javascript",
                     headers={"Cache-Control": "no-store"})
 
 
