@@ -52,8 +52,9 @@ cp 秋招岗位看板.html dist/index.html
 
 本仓库通过 Cloudflare Pages 的 Git 集成部署：推送到 `main` 分支即自动构建发布，无需本地装 wrangler。
 
-- 构建配置：Framework preset = None，Build command 留空，Build output directory = `dist`
-- `dist/index.html` 即看板完整单文件（数据已内嵌，无需后端）
+- 构建配置：Framework preset = None，Build command = `python3 data/build_dashboard.py && cp 秋招岗位看板.html dist/index.html`，Build output directory = `dist`
+- 发布时从 `dashboard_template.html` 与当前岗位快照重新生成 `dist/index.html`（数据内嵌，无需后端）
+- 看板顶部「简历工作台」通过 `dist/_redirects` 的 `/resume` 跳转；后端入口变化时只需更新此映射
 - 修改 `dashboard_template.html` 后运行 `python3 data/build_dashboard.py && cp 秋招岗位看板.html dist/index.html`，提交推送即可上线
 
 ## 自动更新（GitHub Actions）

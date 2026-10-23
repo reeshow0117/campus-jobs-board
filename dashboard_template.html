@@ -28,7 +28,7 @@
   .header h1 { font-size: 22px; font-weight: 600; letter-spacing: .5px; }
   .header h1 span { color: var(--primary); }
   .header .meta { color: var(--text-3); font-size: 12px; margin-top: 4px; }
-  .header-actions { display: flex; gap: 8px; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   /* stats */
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
@@ -134,15 +134,9 @@
   <div class="header">
     <div>
       <h1>秋招岗位看板 <span>27届</span></h1>
-      <div class="meta" id="metaLine"></div>
-      <div class="meta" style="margin-top:2px">
-        数据源：
-        <a href="https://docs.qq.com/smartsheet/DWnBUVm9OVFhuSEJ4?tab=twLpD9&viewId=vPmpSf" target="_blank" style="color:var(--primary)">27届校招秋招实习内推表</a>
-        ·
-        <a href="https://docs.qq.com/sheet/DTENzbmppUGd2Smxk?tab=000001" target="_blank" style="color:var(--primary)">毕业帮校招表格</a>
-      </div>
     </div>
     <div class="header-actions">
+      <a class="btn" id="resumeWorkspaceLink" href="/resume" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">简历工作台</a>
       <button class="btn" id="profileBtn">投递资料卡</button>
       <button class="btn" id="exportBtn">导出投递清单</button>
       <button class="btn" id="resetBtn" title="清除本地状态">重置状态</button>
@@ -235,8 +229,6 @@ const DATA = JSON.parse(document.getElementById('jobs-data').textContent);
 const JOBS = DATA.jobs, RES = DATA.resources || [];
 const $ = id => document.getElementById(id);
 
-document.getElementById('metaLine').textContent =
-  `数据更新于 ${DATA.updated} · 共 ${DATA.count} 条岗位 · 来源：27届校招秋招实习内推表 + 毕业帮校招表格 · 截止时间为表格原文、未经核实（投递前以官网公告为准） · 投递状态仅保存在本机浏览器`;
 
 // ---------- state ----------
 const LS_STATUS = 'qz_status_v1', LS_FAV = 'qz_fav_v1', LS_PROFILE = 'qz_profile_v1';
