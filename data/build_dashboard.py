@@ -9,7 +9,9 @@ data = open(os.path.join(BASE, "data", "jobs_merged.json"), encoding="utf-8").re
 # 防止 JSON 中的 </script> 提前闭合标签
 data_safe = data.replace("</", "<\\/")
 
-out = tpl.replace("__JOBS_DATA__", data_safe)
+catalog = open(os.path.join(BASE, "company_catalog.js"), encoding="utf-8").read()
+ui = open(os.path.join(BASE, "company_browser.js"), encoding="utf-8").read()
+out = tpl.replace("__JOBS_DATA__", data_safe).replace("__COMPANY_CATALOG_JS__", catalog.replace("</", "<\\/")).replace("__COMPANY_BROWSER_JS__", ui.replace("</", "<\\/"))
 out_path = os.path.join(BASE, "秋招岗位看板.html")
 with open(out_path, "w", encoding="utf-8") as f:
     f.write(out)

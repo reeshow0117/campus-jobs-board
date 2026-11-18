@@ -127,6 +127,51 @@
   /* batch bar */
   .batchbar { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 10px 24px; box-shadow: 0 -2px 12px rgba(0,0,0,.08); z-index: 50; align-items: center; gap: 12px; font-size: 13px; }
   .batchbar.show { display: flex; }
+  [hidden] { display: none !important; }
+  button, input, select { font-family: inherit; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+  .browse-tabs { display:flex; gap:28px; border-bottom:1px solid var(--border); margin:10px 0 24px; }
+  .browse-tab { background:none; border:0; padding:12px 0; color:var(--text-2); font-size:15px; cursor:pointer; border-bottom:2px solid transparent; }
+  .browse-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+  .company-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; }
+  .category-tabs, .subfilters { display:flex; flex-wrap:wrap; gap:8px; }
+  .category-tab, .chip { border:1px solid transparent; border-radius:6px; background:transparent; color:var(--text-2); padding:7px 12px; font-size:14px; cursor:pointer; }
+  .category-tab.active { background:#e8f0fa; color:var(--primary); font-weight:600; }
+  .chip { font-size:13px; padding:5px 10px; }
+  .chip.active { background:#fff; border-color:var(--border); color:var(--text); }
+  .company-search { display:flex; gap:8px; flex-wrap:wrap; }
+  .company-search input, .company-search select, #unitFilter { height:34px; border:1px solid var(--border); border-radius:6px; padding:0 10px; background:#fff; color:var(--text); max-width:100%; }
+  .company-search input { width:220px; }
+  .subfilters { margin-bottom:10px; align-items:center; }
+  .filter-label { color:var(--text-3); font-size:12px; padding-right:4px; }
+  .company-caption { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:24px 0 14px; }
+  .company-caption h2, .company-context h2 { font-size:18px; font-weight:600; }
+  .quiet { color:var(--text-3); font-size:12px; line-height:1.7; }
+  .company-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+  .company-card { background:#fff; border:1px solid var(--border); border-radius:8px; padding:18px; text-align:left; color:var(--text); cursor:pointer; min-height:138px; display:flex; flex-direction:column; gap:10px; }
+  .company-card:hover { border-color:#9bb5d3; }
+  .company-card h3 { font-size:16px; font-weight:600; overflow-wrap:anywhere; }
+  .company-card .card-meta { color:var(--text-2); font-size:12px; }
+  .company-card .card-foot { margin-top:auto; color:var(--primary); font-size:13px; display:flex; justify-content:space-between; }
+  .tier-heading { grid-column:1/-1; font-size:14px; font-weight:500; color:var(--text-2); padding:14px 0 0; }
+  .tier-heading:first-child { padding-top:0; }
+  .company-context { display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
+  .company-context select { margin-left:auto; width:340px; }
+  .empty-state { padding:48px 18px; text-align:center; color:var(--text-2); grid-column:1/-1; background:#fff; border:1px solid var(--border); border-radius:8px; }
+  @media(max-width:960px) { .company-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media(max-width:680px) {
+    .container { padding:12px 16px 40px; } .header { align-items:flex-start; padding-top:10px; }
+    .header h1 { font-size:20px; } .header-actions { gap:6px; } .header-actions .btn { padding:0 10px; font-size:12px; }
+    .company-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .company-card { padding:14px; min-height:134px; }
+    .company-card h3 { font-size:15px; } .company-card .card-foot { font-size:12px; gap:4px; }
+    .category-tabs { gap:2px; } .category-tab { padding:7px 9px; font-size:13px; }
+    .company-search { width:100%; } .company-search input { flex:1; min-width:120px; width:0; }
+    .company-search select { max-width:140px; } .company-context select { width:100%; margin-left:0; }
+    .filterbar input[type=text] { width:100%; } .filterbar { padding:12px; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .job { flex-direction:column; gap:10px; } .job-side { flex-direction:row; width:100%; justify-content:space-between; align-items:center; }
+    .job-sub, .job-title, .company { overflow-wrap:anywhere; } .res-grid { grid-template-columns:minmax(0,1fr); }
+    .batchbar { flex-wrap:wrap; padding:10px 16px; } .batchbar span { width:100%; overflow-wrap:anywhere; }
+  }
 </style>
 </head>
 <body>
@@ -143,6 +188,31 @@
     </div>
   </div>
 
+  <nav class="browse-tabs" aria-label="浏览方式">
+    <button class="browse-tab active" id="companiesTab" aria-pressed="true">按公司浏览</button>
+    <button class="browse-tab" id="jobsTab" aria-pressed="false">全部岗位</button>
+  </nav>
+  <section id="companyHome" aria-label="公司分类">
+    <div class="company-toolbar">
+      <div class="category-tabs" id="companyCategories" aria-label="公司类型"></div>
+      <div class="company-search">
+        <input id="companyQuery" type="search" placeholder="搜索公司或集团内单位" aria-label="搜索公司或集团内单位">
+        <select id="companySort" aria-label="公司排序"><option value="rank">梯队与知名度</option><option value="count">招聘信息数量</option><option value="name">公司名称</option></select>
+      </div>
+    </div>
+    <div class="subfilters" id="companyNatures" aria-label="国企性质" hidden></div>
+    <div class="subfilters" id="companySectors" aria-label="行业分类"></div>
+    <div class="company-caption"><h2 id="companyHeading">大厂</h2><span class="quiet" id="companyCount" aria-live="polite"></span></div>
+    <div class="company-grid" id="companyGrid"></div>
+    <button class="btn loadmore" id="moreCompanies">更多公司</button>
+    <p class="quiet" id="companyRankNote">梯队为浏览顺序，可切换行业和排序。</p>
+  </section>
+  <section id="jobsWorkspace" aria-label="岗位列表" hidden>
+    <div class="company-context" id="companyContext" hidden>
+      <button class="btn" id="backCompanies">← 返回公司</button>
+      <div><h2 id="activeCompanyName"></h2><p class="quiet" id="activeCompanyMeta"></p></div>
+      <select id="unitFilter" aria-label="招聘单位或业务"></select>
+    </div>
   <div class="stats" id="stats"></div>
 
   <div class="filterbar">
@@ -175,7 +245,8 @@
   <div id="list"></div>
   <button class="btn loadmore" id="loadMore">加载更多</button>
 
-  <div class="section-title">求职资源（国央企资料库 / 官方招聘平台）</div>
+  </section>
+  <div class="section-title">求职资源</div>
   <div class="res-grid" id="resources"></div>
 </div>
 
@@ -222,12 +293,15 @@
 <div class="toast" id="toast"></div>
 
 <script id="jobs-data" type="application/json">__JOBS_DATA__</script>
+<script>__COMPANY_CATALOG_JS__</script>
 <script>
 (function(){
 "use strict";
 const DATA = JSON.parse(document.getElementById('jobs-data').textContent);
 const JOBS = DATA.jobs, RES = DATA.resources || [];
 const $ = id => document.getElementById(id);
+const companyCatalog = BoardCompanies.build(JOBS);
+let activeCompany = null;
 
 
 // ---------- state ----------
@@ -340,6 +414,8 @@ function applyFilters() {
   const needRef = $('fRef').checked, needFree = $('fFree').checked, onlyFav = $('fFav').checked;
   const tags = msTag.selected, ctypes = msType.selected, jts = msJtype.selected, cities = msCity.selected;
   filtered = JOBS.filter(j => {
+    if (activeCompany && companyCatalog.membership.get(j) !== activeCompany.id) return false;
+    if (activeCompany && $('unitFilter').value && String(j.company || '').trim() !== $('unitFilter').value) return false;
     if (q) {
       const hay = ((j.company||'') + ' ' + (j.title||'') + ' ' + (j.note||'') + ' ' + (j.city||'')).toLowerCase();
       if (!hay.includes(q)) return false;
@@ -379,9 +455,10 @@ function applyFilters() {
   $('list').innerHTML = '';
   renderMore();
   $('resultCount').textContent = `匹配 ${filtered.length} 条`;
+  if (!filtered.length) $('list').innerHTML = '<div class="empty-state">没有匹配的岗位，试试调整筛选条件。</div>';
 }
 
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function renderMore() {
   const list = $('list');
@@ -589,8 +666,9 @@ const batchBtn = document.createElement('button');
 batchBtn.className = 'btn btn-primary';
 batchBtn.textContent = '批量投递当前筛选';
 batchBtn.onclick = startBatch;
-document.querySelector('.header-actions').prepend(batchBtn);
+document.querySelector('#jobsWorkspace .filterbar').append(batchBtn);
 
+__COMPANY_BROWSER_JS__
 // init
 applyFilters();
 })();
